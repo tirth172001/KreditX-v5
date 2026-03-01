@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { EllipsisVertical, X } from "lucide-react";
 import { useLoanStore } from "@/store/loanStore";
-
-type MerchantStripMode = "close" | "none" | "placeholder" | "menu-close";
 
 export function MerchantStrip() {
   const currentScreen = useLoanStore((s) => s.currentScreen);
@@ -13,22 +10,7 @@ export function MerchantStrip() {
   );
   const merchantName = useLoanStore((s) => s.data.merchant.name) || "Croma";
   const merchantInitial = merchantName.charAt(0).toUpperCase();
-  const [overrideMode, setOverrideMode] = useState<MerchantStripMode | null>(null);
-
-  useEffect(() => {
-    const listener = (event: Event) => {
-      const customEvent = event as CustomEvent<{ mode?: MerchantStripMode | "default" }>;
-      const mode = customEvent.detail?.mode;
-      setOverrideMode(mode && mode !== "default" ? mode : null);
-    };
-
-    window.addEventListener("loan:merchant-strip-mode", listener);
-    return () => window.removeEventListener("loan:merchant-strip-mode", listener);
-  }, []);
-
-  useEffect(() => {
-    setOverrideMode(null);
-  }, [currentScreen]);
+  const overrideMode = useLoanStore((s) => s.merchantStripMode);
 
   if (overrideMode === "placeholder" || overrideMode === "none") {
     return (

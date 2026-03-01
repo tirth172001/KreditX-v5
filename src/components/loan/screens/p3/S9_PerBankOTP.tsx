@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { Check } from "lucide-react";
+import { BottomSheet } from "@/components/loan/shared/BottomSheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useLoanStore, type BankAccount } from "@/store/loanStore";
+import { OTPInput } from "@/components/loan/shared/OTPInput";
+import { useLoanStore, SCREENS, type BankAccount } from "@/store/loanStore";
+import { screenContainer, screenItem, listContainer, listItem } from "@/components/loan/shared/motion";
 
 type FlowState = "skeleton" | "discovery" | "final_loading";
 
@@ -145,7 +150,7 @@ function AccountLogo({ account, size = 32 }: { account: LocalAccount; size?: num
 }
 
 export function S9_PerBankOTP() {
-  const { data, update, next } = useLoanStore();
+  const { data, update, goTo } = useLoanStore();
   const mobileLast4 = (data.mobile || "").slice(-4) || "9747";
   const otpPhoneLast4 = "9898";
 
@@ -155,9 +160,9 @@ export function S9_PerBankOTP() {
   );
   const [otpSheetOpen, setOtpSheetOpen] = useState(false);
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
-  const [otp, setOtp] = useState("111111");
+  const [otp, setOtp] = useState("");
   const [retriesLeft, setRetriesLeft] = useState(3);
-  const refs = useRef<(HTMLInputElement | null)[]>([]);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     if (flowState === "skeleton") {
@@ -166,12 +171,12 @@ export function S9_PerBankOTP() {
     }
 
     if (flowState === "final_loading") {
-      const timer = setTimeout(() => next(), 2200);
+      const timer = setTimeout(() => goTo(SCREENS.AADHAAR_KYC), 2200);
       return () => clearTimeout(timer);
     }
 
     return;
-  }, [flowState, next]);
+  }, [flowState, goTo]);
 
   const selectedAccounts = useMemo(
     () => accounts.filter((account) => account.isSelected),
@@ -201,17 +206,6 @@ export function S9_PerBankOTP() {
     .slice(0, currentGroupIndex)
     .reduce((count, group) => count + group.accounts.length, 0);
 
-  const otpDigits = Array.from({ length: 6 }, (_, index) => otp[index] ?? "");
-
-  const updateOtpDigit = (index: number, value: string) => {
-    if (!/^\d?$/.test(value)) return;
-    const nextValue = otpDigits
-      .map((digit, digitIndex) => (digitIndex === index ? value : digit))
-      .join("");
-    setOtp(nextValue);
-    if (value && index < 5) refs.current[index + 1]?.focus();
-  };
-
   const toggleAccount = (id: string) => {
     setAccounts((previous) =>
       previous.map((account) =>
@@ -229,21 +223,16 @@ export function S9_PerBankOTP() {
   const startOtpSequence = () => {
     if (selectedAccounts.length === 0) return;
     setCurrentGroupIndex(0);
-    setOtp("111111");
+    setOtp("");
     setRetriesLeft(3);
     setOtpSheetOpen(true);
-    setTimeout(() => refs.current[0]?.focus(), 0);
   };
 
-  const handleResendOtp = () => {
-    if (retriesLeft === 0) return;
-    setRetriesLeft((value) => Math.max(0, value - 1));
-    setOtp("111111");
-    setTimeout(() => refs.current[0]?.focus(), 0);
-  };
-
-  const verifyCurrentBank = () => {
+  const verifyCurrentBank = async () => {
     if (!currentGroup || otp.length !== 6) return;
+    setIsVerifying(true);
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    setIsVerifying(false);
 
     const accountIds = new Set(currentGroup.accounts.map((account) => account.id));
     const nextAccounts = accounts.map((account) =>
@@ -252,6 +241,7 @@ export function S9_PerBankOTP() {
 
     setAccounts(nextAccounts);
     update({ discoveredAccounts: nextAccounts.map(toStoreAccount) });
+    toast.success(`${currentGroup.bankName} verified`);
 
     if (currentGroupIndex >= selectedGroups.length - 1) {
       setOtpSheetOpen(false);
@@ -260,9 +250,15 @@ export function S9_PerBankOTP() {
     }
 
     setCurrentGroupIndex((value) => value + 1);
-    setOtp("111111");
+    setOtp("");
     setRetriesLeft(3);
-    setTimeout(() => refs.current[0]?.focus(), 0);
+  };
+
+  const handleResendOtp = () => {
+    if (retriesLeft === 0) return;
+    setRetriesLeft((value) => Math.max(0, value - 1));
+    setOtp("");
+    toast.info("OTP resent");
   };
 
   if (flowState === "skeleton") {
@@ -339,25 +335,32 @@ export function S9_PerBankOTP() {
 
   return (
     <>
-      <div className="flex flex-col gap-6 pb-44">
-        <div className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+      <motion.div
+        className="flex flex-col gap-6 pb-44"
+        variants={screenContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
 
-        <div className="space-y-2">
+        <motion.div variants={screenItem} className="space-y-2">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
             {accounts.length} Bank accounts found
           </h2>
           <p className="text-sm leading-5 text-[#78716c]">
             We found below bank accounts linked with your phone number xx{mobileLast4}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="space-y-2">
+        <motion.div variants={listContainer} className="space-y-2">
           {accounts.map((account) => (
-            <button
+            <motion.button
               key={account.id}
+              variants={listItem}
               type="button"
               onClick={() => toggleAccount(account.id)}
               className="flex w-full items-start gap-2 rounded-lg bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+              whileTap={{ scale: 0.985 }}
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <AccountLogo account={account} />
@@ -370,20 +373,20 @@ export function S9_PerBankOTP() {
                 </div>
               </div>
 
-              <span
+              <motion.span
                 className={cn(
                   "mt-0.5 flex h-4 w-4 items-center justify-center rounded border",
-                  account.isSelected
-                    ? "border-[#003323] bg-[#003323]"
-                    : "border-[#e7e5e4] bg-[#fafaf9]"
+                  account.isSelected ? "border-[#003323] bg-[#003323]" : "border-[#e7e5e4] bg-[#fafaf9]"
                 )}
+                animate={account.isSelected ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                transition={{ duration: 0.18 }}
               >
                 {account.isSelected && <Check className="h-3 w-3 text-white" strokeWidth={2.5} />}
-              </span>
-            </button>
+              </motion.span>
+            </motion.button>
           ))}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 border-t border-[#e7e5e4] bg-[#fafaf9] px-4 py-4">
         <button
@@ -408,26 +411,9 @@ export function S9_PerBankOTP() {
         </div>
       </div>
 
-      {otpSheetOpen && currentGroup && (
-        <>
-          <button
-            type="button"
-            onClick={() => setOtpSheetOpen(false)}
-            className="fixed inset-0 z-[60] bg-black/85"
-            aria-label="Close verification"
-          />
-
-          <div className="fixed inset-0 z-[70] flex flex-col justify-end">
-            <button
-              type="button"
-              onClick={() => setOtpSheetOpen(false)}
-              className="mb-4 self-center rounded-full bg-[#78716c] p-2 text-white"
-              aria-label="Close"
-            >
-              <X className="h-6 w-6" strokeWidth={2} />
-            </button>
-
-            <div className="w-full max-w-[390px] self-center overflow-hidden rounded-t-2xl bg-[#fafaf9]">
+      <BottomSheet open={otpSheetOpen} onClose={() => setOtpSheetOpen(false)}>
+        {currentGroup && (
+            <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-[#fafaf9]">
               <div className="flex items-center justify-center gap-3 border-b border-[#d6d3d1] bg-white px-6 py-3">
                 <p className="text-sm font-medium text-[#44403c]">
                   {verifiedBeforeCurrent}/{selectedAccounts.length} accounts verified
@@ -468,27 +454,7 @@ export function S9_PerBankOTP() {
                     OTP sent to number ending with {otpPhoneLast4}
                   </p>
 
-                  <div className="flex w-full overflow-hidden rounded-lg border border-[#e5e5e5] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-                    {otpDigits.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={(element) => {
-                          refs.current[index] = element;
-                        }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(event) => updateOtpDigit(index, event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Backspace" && !digit && index > 0) {
-                            refs.current[index - 1]?.focus();
-                          }
-                        }}
-                        className="h-10 flex-1 border-r border-[#e5e5e5] bg-white text-center text-base text-[#1c1917] outline-none last:border-r-0"
-                      />
-                    ))}
-                  </div>
+                  <OTPInput length={6} value={otp} onChange={setOtp} fullWidth />
 
                   <div className="flex items-center justify-between">
                     <button
@@ -506,21 +472,22 @@ export function S9_PerBankOTP() {
                 <Button
                   type="button"
                   onClick={verifyCurrentBank}
-                  disabled={otp.length !== 6}
+                  disabled={otp.length !== 6 || isVerifying}
                   className="h-10 w-full text-sm font-medium"
                 >
-                  Verify OTP
+                  {isVerifying ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Verifying...
+                    </span>
+                  ) : "Verify OTP"}
                 </Button>
 
-                <div className="flex items-center justify-center gap-2 text-xs text-[#84878a]">
-                  <span>Powered by RBI regulated AA</span>
-                  <img src={ONEMONEY_LOGO} alt="Onemoney" className="h-5 w-[68px] object-contain" />
-                </div>
+                <p className="text-center text-xs text-[#84878a]">Powered by RBI regulated AA</p>
               </div>
             </div>
-          </div>
-        </>
-      )}
+        )}
+      </BottomSheet>
     </>
   );
 }

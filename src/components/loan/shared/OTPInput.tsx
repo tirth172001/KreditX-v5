@@ -8,9 +8,10 @@ interface OTPInputProps {
   value: string;
   onChange: (val: string) => void;
   className?: string;
+  fullWidth?: boolean;
 }
 
-export function OTPInput({ length = 6, value, onChange, className }: OTPInputProps) {
+export function OTPInput({ length = 6, value, onChange, className, fullWidth = false }: OTPInputProps) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   const digits = Array.from({ length }, (_, i) => value[i] ?? "");
@@ -38,7 +39,13 @@ export function OTPInput({ length = 6, value, onChange, className }: OTPInputPro
   };
 
   return (
-    <div className={cn("flex gap-2 justify-center", className)}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border border-[#e5e5e5] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]",
+        fullWidth ? "flex w-full" : "inline-flex",
+        className
+      )}
+    >
       {digits.map((digit, i) => (
         <input
           key={i}
@@ -52,11 +59,9 @@ export function OTPInput({ length = 6, value, onChange, className }: OTPInputPro
           onPaste={handlePaste}
           onFocus={(e) => e.target.select()}
           className={cn(
-            "w-11 h-14 text-center text-xl font-bold rounded-xl border-2 bg-white outline-none transition-all",
-            digit
-              ? "border-primary text-primary"
-              : "border-border text-foreground",
-            "focus:border-primary focus:ring-2 focus:ring-primary/20"
+            "h-10 min-w-0 border-r border-[#e5e5e5] bg-white text-center text-base font-medium text-[#1c1917] outline-none transition-colors last:border-r-0",
+            fullWidth ? "flex-1" : "w-11",
+            "focus:bg-[#fafaf9]"
           )}
         />
       ))}

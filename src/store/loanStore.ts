@@ -3,6 +3,8 @@ import { persist } from "zustand/middleware";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export type MerchantStripMode = "close" | "none" | "placeholder" | "menu-close";
+
 export interface MerchantContext {
   name: string;
   productName: string;
@@ -21,6 +23,7 @@ export interface LenderOffer {
   isEligible: boolean;
   ineligibleReason?: string;
   isSelected: boolean;
+  maxAmount?: number;
 }
 
 export interface FinalOffer {
@@ -29,6 +32,8 @@ export interface FinalOffer {
   logoInitial: string;
   color: string;
   rate: number;
+  maxRate?: number;
+  maxAmount: number;
   processingFee: number;
   totalPayable: number;
 }
@@ -45,18 +50,15 @@ export interface BankAccount {
 }
 
 export interface LoanData {
-  // Merchant context (kept for backward compat with other screens)
   merchant: MerchantContext;
 
-  // Phase 1 — Personal details
+  // Eligibility form
   firstName: string;
   lastName: string;
   dob: string;
   gender: string;
   maritalStatus: string;
   fathersName: string;
-
-  // Phase 1 — Address & Employment
   address1: string;
   city: string;
   state: string;
@@ -64,72 +66,73 @@ export interface LoanData {
   employmentType: string;
   companyName: string;
   monthlyIncome: number;
-
-  // Phase 1 — Contact & Loan ask
   mobile: string;
   email: string;
   panNumber: string;
   loanAmount: number;
   loanPurpose: string;
 
-  // Phase 2 — Lenders
+  // Lenders
   eligibleLenders: LenderOffer[];
   creditScore: number;
 
-  // Phase 3 — Account Aggregator
+  // Account Aggregator
   selectedBanks: string[];
   discoveredAccounts: BankAccount[];
 
-  // Phase 4 — Indicative Offers (offers with ranges)
-  indicativeLoanAmount: number;
-
-  // Phase 5 — KYC
+  // KYC
   aadhaarNumber: string;
   aadhaarVerified: boolean;
   faceVerified: boolean;
 
-  // Phase 6 — Final Offer Selection
+  // Final Offer Selection
   finalOffers: FinalOffer[];
   selectedOfferId: string;
   selectedTenure: number;
   finalLoanAmount: number;
   finalEMI: number;
 
-  // Phase 7 — Autopay
+  // Bank account for repayment
+  repaymentBankAccount: string;
+  repaymentBankMasked: string;
+  repaymentAccountNumber: string;
+  repaymentIFSC: string;
+  bankVerified: boolean;
+
+  // Autopay
   autopayMethod: string;
   autopayApp: string;
   autopayBank: string;
   mandateSetup: boolean;
 
-  // Phase 8 — Agreement
-  agreementOtpSent: boolean;
-  agreementSigned: boolean;
-
-  // Phase 9 — Transfer
+  // Transfer
   transferOtpSent: boolean;
   transferProcessing: boolean;
   transferCompleted: boolean;
 }
 
-// ─── Phase Map ────────────────────────────────────────────────────────────────
+// ─── Screen Constants ─────────────────────────────────────────────────────────
 
-export const PHASES = [
-  { id: 1, label: "Eligibility", screens: [1, 2, 3] },
-  { id: 2, label: "Lenders", screens: [4] },
-  { id: 3, label: "Bank", screens: [5, 6, 7, 8, 9] },
-  { id: 4, label: "Offers", screens: [10] },
-  { id: 5, label: "KYC", screens: [11, 12] },
-  { id: 6, label: "Select", screens: [13, 14] },
-  { id: 7, label: "Autopay", screens: [15, 16, 17] },
-  { id: 8, label: "Sign", screens: [18, 19] },
-  { id: 9, label: "Done", screens: [20] },
-];
-
-export const TOTAL_SCREENS = 20;
-
-export function getPhaseForScreen(screen: number) {
-  return PHASES.find((p) => p.screens.includes(screen)) ?? PHASES[0];
-}
+export const SCREENS = {
+  CONFIRM_DETAILS: 1,
+  ELIGIBILITY_LOADER: 2,
+  ELIGIBILITY_RESULT: 3,
+  // 4 removed (was LENDER_SELECTION)
+  AA_INTRO: 5,
+  BANK_SELECTION: 6,
+  AA_OTP: 7,
+  ACCOUNTS_FOUND: 8,
+  PER_BANK_OTP: 9,
+  FINAL_OFFERS: 10,
+  AADHAAR_KYC: 11,
+  FACE_VERIFICATION: 12,
+  // 13 skipped
+  LENDER_DETAIL: 14,
+  SETUP_AUTOREPAYMENT: 15,
+  SELECT_AUTOPAY: 16,
+  // 17, 18, 19 removed
+  TRANSFER_AMOUNT: 20,
+} as const;
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -141,26 +144,25 @@ const MOCK_MERCHANT: MerchantContext = {
 };
 
 const MOCK_LENDERS: LenderOffer[] = [
-  { id: "hdfc", name: "HDFC Bank", logoInitial: "H", color: "#004C8F", minRate: 10.5, maxRate: 12.0, processingFee: 999, isEligible: true, isSelected: true },
-  { id: "axis", name: "Axis Bank", logoInitial: "A", color: "#800020", minRate: 11.0, maxRate: 13.5, processingFee: 1199, isEligible: true, isSelected: true },
-  { id: "ab", name: "Aditya Birla", logoInitial: "AB", color: "#E03B2C", minRate: 12.0, maxRate: 14.0, processingFee: 799, isEligible: true, isSelected: true },
-  { id: "icici", name: "ICICI Bank", logoInitial: "IC", color: "#F58220", minRate: 11.5, maxRate: 13.0, processingFee: 1099, isEligible: true, isSelected: true },
-  { id: "kotak", name: "Kotak Mahindra", logoInitial: "K", color: "#ED1C24", minRate: 10.99, maxRate: 12.5, processingFee: 999, isEligible: true, isSelected: true },
+  { id: "ab", name: "Aditya Birla Capital", logoInitial: "AB", color: "#E03B2C", minRate: 11.5, maxRate: 11.5, processingFee: 900, isEligible: true, isSelected: true, maxAmount: 400000 },
+  { id: "axis", name: "Axis Bank", logoInitial: "A", color: "#800020", minRate: 11.5, maxRate: 13, processingFee: 1199, isEligible: true, isSelected: true, maxAmount: 400000 },
+  { id: "canara", name: "Canara Bank", logoInitial: "CB", color: "#0ea5e9", minRate: 11.5, maxRate: 13, processingFee: 999, isEligible: true, isSelected: true, maxAmount: 300000 },
+  { id: "hdfc", name: "HDFC Bank", logoInitial: "H", color: "#004C8F", minRate: 11.5, maxRate: 13, processingFee: 999, isEligible: true, isSelected: true, maxAmount: 300000 },
+  { id: "idfc", name: "IDFC Bank", logoInitial: "IF", color: "#B91C1C", minRate: 11.5, maxRate: 13, processingFee: 799, isEligible: true, isSelected: true, maxAmount: 300000 },
   { id: "sbi", name: "SBI", logoInitial: "SB", color: "#21409A", minRate: 11.0, maxRate: 14.0, processingFee: 0, isEligible: false, ineligibleReason: "Requires 750+ CIBIL", isSelected: false },
-  { id: "bajaj", name: "Bajaj Finance", logoInitial: "BF", color: "#006DB7", minRate: 13.0, maxRate: 16.0, processingFee: 1499, isEligible: false, ineligibleReason: "Minimum income ₹35,000", isSelected: false },
+  { id: "icici", name: "ICICI Bank", logoInitial: "IC", color: "#F58220", minRate: 11.5, maxRate: 13.0, processingFee: 1099, isEligible: false, ineligibleReason: "Minimum income ₹35,000", isSelected: false },
 ];
 
 const MOCK_ACCOUNTS: BankAccount[] = [
+  { id: "canara-1", bankName: "Canara Bank", bankLogoInitial: "CB", bankColor: "#0ea5e9", accountType: "savings", maskedNumber: "8234", isSelected: true, otpVerified: false },
   { id: "hdfc-1", bankName: "HDFC Bank", bankLogoInitial: "H", bankColor: "#004C8F", accountType: "savings", maskedNumber: "4521", isSelected: true, otpVerified: false },
-  { id: "icici-1", bankName: "ICICI Bank", bankLogoInitial: "IC", bankColor: "#F58220", accountType: "savings", maskedNumber: "7834", isSelected: true, otpVerified: false },
-  { id: "axis-1", bankName: "Axis Bank", bankLogoInitial: "A", bankColor: "#800020", accountType: "current", maskedNumber: "2290", isSelected: false, otpVerified: false },
 ];
 
 const MOCK_FINAL_OFFERS: FinalOffer[] = [
-  { id: "hdfc", name: "HDFC Bank", logoInitial: "H", color: "#004C8F", rate: 10.75, processingFee: 999, totalPayable: 0 },
-  { id: "axis", name: "Axis Bank", logoInitial: "A", color: "#800020", rate: 11.25, processingFee: 1199, totalPayable: 0 },
-  { id: "ab", name: "Aditya Birla", logoInitial: "AB", color: "#E03B2C", rate: 12.5, processingFee: 799, totalPayable: 0 },
-  { id: "kotak", name: "Kotak Mahindra", logoInitial: "K", color: "#ED1C24", rate: 11.0, processingFee: 999, totalPayable: 0 },
+  { id: "ab", name: "Aditya Birla Capital", logoInitial: "AB", color: "#E03B2C", rate: 11.5, maxRate: 11.5, maxAmount: 400000, processingFee: 900, totalPayable: 0 },
+  { id: "canara", name: "Canara Bank", logoInitial: "CB", color: "#0ea5e9", rate: 11.5, maxRate: 13, maxAmount: 300000, processingFee: 999, totalPayable: 0 },
+  { id: "hdfc", name: "HDFC Bank", logoInitial: "H", color: "#004C8F", rate: 11.5, maxRate: 13, maxAmount: 300000, processingFee: 999, totalPayable: 0 },
+  { id: "idfc", name: "IDFC Bank", logoInitial: "IF", color: "#B91C1C", rate: 11.5, maxRate: 13, maxAmount: 300000, processingFee: 799, totalPayable: 0 },
 ];
 
 // ─── Default State ────────────────────────────────────────────────────────────
@@ -189,21 +191,23 @@ const defaultData: LoanData = {
   creditScore: 742,
   selectedBanks: [],
   discoveredAccounts: MOCK_ACCOUNTS,
-  indicativeLoanAmount: 112990,
   aadhaarNumber: "",
   aadhaarVerified: false,
   faceVerified: false,
   finalOffers: MOCK_FINAL_OFFERS,
   selectedOfferId: "",
-  selectedTenure: 24,
-  finalLoanAmount: 112990,
+  selectedTenure: 9,
+  finalLoanAmount: 500000,
   finalEMI: 0,
+  repaymentBankAccount: "Canara Bank",
+  repaymentBankMasked: "8234",
+  repaymentAccountNumber: "CAN001234",
+  repaymentIFSC: "CNRB0001234",
+  bankVerified: false,
   autopayMethod: "",
   autopayApp: "",
   autopayBank: "",
   mandateSetup: false,
-  agreementOtpSent: false,
-  agreementSigned: false,
   transferOtpSent: false,
   transferProcessing: false,
   transferCompleted: false,
@@ -214,11 +218,13 @@ const defaultData: LoanData = {
 interface LoanStore {
   currentScreen: number;
   data: LoanData;
+  merchantStripMode: MerchantStripMode | null;
   goTo: (screen: number) => void;
   next: () => void;
   back: () => void;
   update: (patch: Partial<LoanData>) => void;
   reset: () => void;
+  setMerchantStripMode: (mode: MerchantStripMode | null) => void;
 }
 
 export const useLoanStore = create<LoanStore>()(
@@ -226,12 +232,14 @@ export const useLoanStore = create<LoanStore>()(
     (set) => ({
       currentScreen: 1,
       data: defaultData,
+      merchantStripMode: null,
       goTo: (screen) => set({ currentScreen: screen }),
-      next: () => set((s) => ({ currentScreen: Math.min(s.currentScreen + 1, TOTAL_SCREENS) })),
+      next: () => set((s) => ({ currentScreen: s.currentScreen + 1 })),
       back: () => set((s) => ({ currentScreen: Math.max(s.currentScreen - 1, 1) })),
       update: (patch) => set((s) => ({ data: { ...s.data, ...patch } })),
       reset: () => set({ currentScreen: 1, data: defaultData }),
+      setMerchantStripMode: (mode) => set({ merchantStripMode: mode }),
     }),
-    { name: "loan-journey-v5" }
+    { name: "loan-journey-v9" }
   )
 );

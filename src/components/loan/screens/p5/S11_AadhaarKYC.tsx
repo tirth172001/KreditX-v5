@@ -1,296 +1,229 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  BadgeCheck,
-  ChevronLeft,
-  Landmark,
-  Shield,
-  UserRound,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { UserRound } from "lucide-react";
+import { BottomSheet } from "@/components/loan/shared/BottomSheet";
 import { Input } from "@/components/ui/input";
+import { OTPInput } from "@/components/loan/shared/OTPInput";
+import { StepProgressBar } from "@/components/loan/shared/StepProgressBar";
 import { cn } from "@/lib/utils";
-import { useLoanStore } from "@/store/loanStore";
-import { SelectedLendersRow } from "@/components/loan/shared/SelectedLendersRow";
-
-type KYCStep = "eligible" | "aadhaar" | "digilocker";
-
-const INDIA_EMBLEM = "https://www.figma.com/api/mcp/asset/f919c99f-2f8f-443d-a77f-16428700844e";
-const AADHAAR_LOGO = "https://www.figma.com/api/mcp/asset/364cb512-017a-4025-a4b4-b26cf50d0358";
+import { useLoanStore, SCREENS } from "@/store/loanStore";
+import { screenContainer, screenItem } from "@/components/loan/shared/motion";
 
 function formatAadhaar(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 12);
   return digits.replace(/(\d{4})(?=\d)/g, "$1-");
 }
 
+// ─── Aadhaar OTP bottom sheet ─────────────────────────────────────────────────
+
+function AadhaarOTPSheet({
+  mobile,
+  onVerify,
+}: {
+  mobile: string;
+  onVerify: () => void;
+}) {
+  const [otp, setOtp] = useState("");
+  const [retriesLeft, setRetriesLeft] = useState(3);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const mobileLast4 = mobile.slice(-4) || "9898";
+
+  const handleVerify = async () => {
+    if (otp.length !== 6) return;
+    setIsVerifying(true);
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    toast.success("Aadhaar verified successfully");
+    onVerify();
+  };
+
+  return (
+    <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-white">
+      <div className="px-6 pt-6 pb-6 space-y-6">
+        <div>
+          <h3 className="text-[18px] font-semibold text-[#1c1917]">
+            OTP sent on xx{mobileLast4}
+          </h3>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-[#0a0a0a]">Enter OTP</p>
+          <OTPInput length={6} value={otp} onChange={setOtp} fullWidth />
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                if (retriesLeft === 0) return;
+                setRetriesLeft((v) => v - 1);
+                setOtp("");
+                toast.info("OTP resent");
+              }}
+              disabled={retriesLeft === 0}
+              className="text-xs font-medium text-[#003323] disabled:text-[#78716c]/60"
+            >
+              Resend OTP
+            </button>
+            <p className="text-xs text-[#7a7a7a]">{retriesLeft} retries left</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleVerify}
+          disabled={otp.length !== 6 || isVerifying}
+          className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium disabled:opacity-60"
+        >
+          {isVerifying ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Verifying…
+            </span>
+          ) : "Verify OTP"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
 export function S11_AadhaarKYC() {
-  const { data, update, next } = useLoanStore();
-  const [step, setStep] = useState<KYCStep>("eligible");
+  const { data, update, goTo } = useLoanStore();
   const [aadhaarNumber, setAadhaarNumber] = useState(
-    formatAadhaar(data.aadhaarNumber || "323858574689")
+    formatAadhaar(data.aadhaarNumber || "3238585746895")
   );
   const [error, setError] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [otpSheetOpen, setOtpSheetOpen] = useState(false);
 
-  useEffect(() => {
-    const mode = step === "eligible" ? "close" : "none";
-    window.dispatchEvent(new CustomEvent("loan:merchant-strip-mode", { detail: { mode } }));
-
-    return () => {
-      window.dispatchEvent(
-        new CustomEvent("loan:merchant-strip-mode", { detail: { mode: "default" } })
-      );
-    };
-  }, [step]);
-
-  const goToAadhaar = () => setStep("aadhaar");
-
-  const verifyAadhaar = () => {
+  const handleVerify = async () => {
     const digits = aadhaarNumber.replace(/\D/g, "");
     if (digits.length !== 12) {
       setError("Please enter a valid 12-digit Aadhaar number");
       return;
     }
-
     setError("");
+    setIsSending(true);
+    toast.info("OTP sent to your Aadhaar registered number");
+    await new Promise((resolve) => setTimeout(resolve, 800));
     update({ aadhaarNumber: digits });
-    setStep("digilocker");
+    setIsSending(false);
+    setOtpSheetOpen(true);
   };
 
-  const completeAadhaar = () => {
+  const handleOtpVerified = () => {
     update({ aadhaarVerified: true });
-    next();
+    setOtpSheetOpen(false);
+    goTo(SCREENS.FACE_VERIFICATION);
   };
-
-  if (step === "eligible") {
-    return (
-      <div className="flex min-h-[calc(100dvh-170px)] flex-col gap-6">
-        <div className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
-
-        <div className="space-y-1">
-          <h2 className="text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-[#1c1917]">
-            Yay! you are eligible
-          </h2>
-          <p className="text-sm leading-5 text-[#78716c]">
-            Complete below steps to get the loan in your bank account
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-start gap-3 rounded-lg p-3">
-            <BadgeCheck className="mt-0.5 h-5 w-5 text-[#10b981]" strokeWidth={2} />
-            <div>
-              <p className="text-sm font-semibold text-[#1c1917]">Generate offer</p>
-              <p className="text-xs text-[#78716c]">
-                Select your lenders and generate possible offers
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-            <div className="flex items-start gap-3">
-              <UserRound className="mt-0.5 h-5 w-5 text-[#1c1917]" strokeWidth={2} />
-              <div>
-                <p className="text-sm font-semibold text-[#1c1917]">Complete KYC</p>
-                <p className="text-xs text-[#78716c]">
-                  Provide Aadhaar and identity proof to get money
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={goToAadhaar}
-              className="mt-3 text-sm font-medium text-[#003323]"
-            >
-              Start KYC
-            </button>
-          </div>
-
-          {[
-            "Select tenure",
-            "Setup autopay",
-            "Get money in your bank",
-          ].map((label) => (
-            <div key={label} className="flex items-start gap-3 rounded-lg p-3 opacity-50">
-              <Landmark className="mt-0.5 h-5 w-5 text-[#78716c]" strokeWidth={2} />
-              <div>
-                <p className="text-sm font-semibold text-[#1c1917]">{label}</p>
-                <p className="text-xs text-[#78716c]">
-                  Select preferred terms &amp; setup autopay
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-auto flex items-center justify-center gap-2 pb-2 text-xs text-[#78716c]">
-          <Shield className="h-4 w-4" strokeWidth={1.75} />
-          <span>100% secure as per RBI</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "digilocker") {
-    return (
-      <div className="mx-[-16px] min-h-[calc(100dvh-136px)] bg-[#f3f4f6] px-4 pb-8 pt-4">
-        <div className="mb-4 flex items-center justify-center gap-2 text-center">
-          <p className="text-[20px] font-bold text-[#5b7ee0]">MeriPehchaan</p>
-          <p className="text-[20px] font-bold text-[#d18b2e]">G20</p>
-        </div>
-
-        <div className="rounded-xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <h3 className="text-[34px] leading-[40px] font-semibold text-[#1c1917]">Setu</h3>
-
-          <p className="mt-4 text-[15px] leading-6 text-[#525252]">
-            You are about to link your DigiLocker account with Setu application of
-            Brokentusk Technologies Pvt Ltd. You will be signed up for DigiLocker
-            account if it does not exist.
-          </p>
-
-          <Input
-            value="989589389295"
-            readOnly
-            className="mt-4 h-11 rounded-sm border-[#d6d3d1] bg-white text-[#1c1917]"
-          />
-
-          <p className="mt-4 text-[15px] text-[#525252]">
-            Please enter the following text in the box below:
-          </p>
-
-          <div className="mt-2 flex gap-2">
-            <div className="flex h-11 w-[45%] items-center justify-center rounded-sm border border-[#fecaca] bg-[#fff1f2] text-[#f87171] line-through">
-              F8X3JL
-            </div>
-            <Input
-              value="FYUF3U"
-              readOnly
-              className="h-11 flex-1 rounded-sm border-[#3b82f6] bg-[#eff6ff] text-center font-medium"
-            />
-          </div>
-
-          <p className="mt-2 text-[13px] text-[#737373]">
-            Unable to read the above image? <span className="text-[#4f46e5]">Try another!</span>
-          </p>
-
-          <Button
-            type="button"
-            onClick={completeAadhaar}
-            className="mt-6 h-10 w-full rounded-sm bg-[#53a653] text-base hover:bg-[#469346]"
-          >
-            Next
-          </Button>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setStep("aadhaar")}
-          className="mx-auto mt-3 block text-[26px] font-medium text-[#4f46e5]"
-        >
-          Return to Setu
-        </button>
-      </div>
-    );
-  }
 
   return (
     <>
-      <div className="flex flex-col gap-6 pb-44">
-        <div className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+      <motion.div
+        className="flex flex-col gap-6 pb-44"
+        variants={screenContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
 
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-[#1c1917]">
-              Complete KYC
-            </h2>
-            <p className="text-sm leading-5 text-[#78716c]">
-              Please verify your Aadhaar details and face verification to generate final offer
-            </p>
-          </div>
+        <motion.div variants={screenItem} className="space-y-1">
+          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Aadhaar verification</h2>
+          <p className="text-sm leading-5 text-[#78716c]">
+            Provide your Aadhaar number and verify it using OTP sent on your registered number
+          </p>
+        </motion.div>
 
-          <div className="flex items-center gap-3 py-1">
-            <div className="h-1.5 w-[72px] rounded-full bg-[#e7e5e4]">
-              <div className="h-1.5 w-1/2 rounded-full bg-[#003323]" />
+        {/* Aadhaar card */}
+        <motion.div
+          variants={screenItem}
+          className="rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.1)]"
+        >
+          {/* Card header */}
+          <div className="flex items-center gap-2 pb-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#003323]/10 text-[8px] font-bold text-[#003323]">
+              GOI
             </div>
-            <p className="text-xs font-medium text-[#44403c]">Aadhaar verification</p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-[#f5f5f4] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-2">
-            <img src={INDIA_EMBLEM} alt="Government of India" className="h-9 w-auto opacity-90" />
-            <div className="min-w-0 flex-1 opacity-90">
-              <div className="h-2 w-full bg-gradient-to-r from-[#f8a628] to-[rgba(248,166,40,0)]" />
-              <div className="h-2 w-full bg-white" />
-              <div className="h-2 w-full bg-gradient-to-r from-[#259c4d] to-[rgba(37,156,77,0)]" />
+            <div className="flex-1 overflow-hidden">
+              <div className="flex flex-col gap-0.5">
+                <div className="h-2 w-full bg-gradient-to-r from-[#f8a628] via-[#f8a628]/50 to-transparent rounded" />
+                <div className="h-2 bg-white" />
+                <div className="h-2 w-full bg-gradient-to-r from-[#259c4d] via-[#259c4d]/50 to-transparent rounded" />
+              </div>
             </div>
-            <img src={AADHAAR_LOGO} alt="Aadhaar" className="h-9 w-auto opacity-90" />
-          </div>
-
-          <div className="mt-4 flex gap-4">
-            <div className="flex h-16 w-[58px] items-center justify-center rounded bg-[#003323]/10">
-              <UserRound className="h-8 w-8 text-[#003323]" strokeWidth={2} />
-            </div>
-
-            <div className="space-y-1 text-xs leading-4 text-[#1c1917]">
-              <p>
-                <span className="text-[#44403c]">Name:</span>{" "}
-                <span className="font-medium">{`${data.firstName || "Tirth"} ${data.lastName || "Trivedi"}`}</span>
-              </p>
-              <p>
-                <span className="text-[#44403c]">Gender:</span>{" "}
-                <span className="font-medium">Male</span>
-              </p>
-              <p>
-                <span className="text-[#44403c]">DOB:</span>{" "}
-                <span className="font-medium">17/06/2001</span>
-              </p>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#8B1A1A] text-[7px] font-bold text-white leading-tight text-center">
+              AADH<br/>AAR
             </div>
           </div>
 
-          <div className="mt-4 space-y-2">
+          {/* User info */}
+          <div className="flex gap-3 mb-4">
+            <div className="flex h-14 w-12 shrink-0 items-center justify-center rounded-md bg-[#003323]/10">
+              <UserRound className="h-7 w-7 text-[#003323]" strokeWidth={1.5} />
+            </div>
+            <div className="space-y-0.5 text-xs text-[#1c1917]">
+              <p><span className="text-[#78716c]">Name:  </span><span className="font-medium">{`${data.firstName || "Tirth"} ${data.lastName || "Trivedi"}`}</span></p>
+              <p><span className="text-[#78716c]">Gender: </span><span className="font-medium">{data.gender || "Male"}</span></p>
+              <p><span className="text-[#78716c]">DOB:  </span><span className="font-medium">17/06/2001</span></p>
+            </div>
+          </div>
+
+          {/* Aadhaar input */}
+          <div className="space-y-2">
             <Input
               value={aadhaarNumber}
-              onChange={(event) => {
-                setAadhaarNumber(formatAadhaar(event.target.value));
+              onChange={(e) => {
+                setAadhaarNumber(formatAadhaar(e.target.value));
                 if (error) setError("");
               }}
               inputMode="numeric"
+              placeholder="0000-0000-0000"
               className={cn(
                 "h-10 rounded-lg border-[#e7e5e4] bg-[#fafaf9] text-base text-[#1c1917]",
                 error && "border-[#dc2626]"
               )}
             />
-
             {error && <p className="text-xs text-[#dc2626]">{error}</p>}
           </div>
 
           <div className="mt-4 border-t border-[#e7e5e4]" />
-          <p className="mt-4 text-xs text-[#78716c]">OTP will be shared to Aadhaar registered number</p>
-        </div>
+          <p className="mt-3 text-xs text-[#78716c]">OTP will be shared to Aadhaar registered number</p>
+        </motion.div>
+      </motion.div>
 
-        <SelectedLendersRow lenders={data.eligibleLenders} />
+      {/* Footer */}
+      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
+        <div className="flex justify-center mb-3">
+          <StepProgressBar currentStep={2} />
+        </div>
+        <button
+          type="button"
+          onClick={handleVerify}
+          disabled={isSending}
+          className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium disabled:opacity-60"
+        >
+          {isSending ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Sending OTP…
+            </span>
+          ) : "Verify Aadhaar"}
+        </button>
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#78716c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
+        </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-[#fafaf9] px-4 py-4">
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            onClick={() => setStep("eligible")}
-            className="h-10 w-10 bg-[#e8fbff] text-[#0293a6] hover:bg-[#daf7fb]"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-
-          <Button type="button" onClick={verifyAadhaar} className="h-10 flex-1 text-sm font-semibold">
-            Verify Aadhaar
-          </Button>
-        </div>
-      </div>
+      <BottomSheet open={otpSheetOpen} onClose={() => setOtpSheetOpen(false)}>
+        <AadhaarOTPSheet
+          mobile={data.mobile}
+          onVerify={handleOtpVerified}
+        />
+      </BottomSheet>
     </>
   );
 }

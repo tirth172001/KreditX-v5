@@ -1,63 +1,310 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronLeft, LoaderCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, CheckCircle2, ChevronLeft, LoaderCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useLoanStore } from "@/store/loanStore";
-import { SelectedLendersRow } from "@/components/loan/shared/SelectedLendersRow";
+import { useLoanStore, SCREENS } from "@/store/loanStore";
+import { StepProgressBar } from "@/components/loan/shared/StepProgressBar";
+import { screenContainer, screenItem, listContainer, listItem } from "@/components/loan/shared/motion";
 
-type FaceStep = "intro" | "capture" | "verifying" | "success";
+type FaceStep = "intro" | "capture" | "review" | "verifying";
+type FaceCondition =
+  | "initializing"
+  | "camera_error"
+  | "no_face"
+  | "off_center"
+  | "too_far"
+  | "too_close"
+  | "low_light"
+  | "ready";
 
-const SELFIE_PLACEHOLDER = "https://www.figma.com/api/mcp/asset/220016a6-cdf3-40aa-a758-8200951590cf";
-const SELFIE_SAMPLE = "https://www.figma.com/api/mcp/asset/5ff5fbb0-7d94-4b10-bd41-869e90ad0f36";
-const SUCCESS_ICON = "https://www.figma.com/api/mcp/asset/52008dc1-5b1d-4c2b-b46e-563828e5c39f";
+type DetectedFace = {
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+};
+
+type FaceDetectorInstance = {
+  detect: (source: CanvasImageSource) => Promise<DetectedFace[]>;
+};
+
+const CONDITION_COPY: Record<FaceCondition, string> = {
+  initializing: "Starting camera...",
+  camera_error: "Camera access is required for selfie verification",
+  no_face: "Keep your face inside the circle",
+  off_center: "Center your face in the circle",
+  too_far: "Move a little closer",
+  too_close: "Move slightly away",
+  low_light: "Increase lighting on your face",
+  ready: "Perfect. Hold still and capture",
+};
 
 export function S12_FaceVerification() {
-  const { data, update, next, back } = useLoanStore();
+  const { data, update, goTo, back } = useLoanStore();
+  const setMerchantStripMode = useLoanStore((s) => s.setMerchantStripMode);
   const [step, setStep] = useState<FaceStep>("intro");
+  const [condition, setCondition] = useState<FaceCondition>("initializing");
+  const [capturedImage, setCapturedImage] = useState("");
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const detectorRef = useRef<FaceDetectorInstance | null>(null);
+  const detectingRef = useRef(false);
 
   useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent("loan:merchant-strip-mode", { detail: { mode: "none" } })
-    );
+    setMerchantStripMode("none");
+    return () => setMerchantStripMode(null);
+  }, [setMerchantStripMode]);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setCondition("initializing");
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      const faceApiWindow = window as typeof window & {
+        FaceDetector?: new (options?: { maxDetectedFaces?: number; fastMode?: boolean }) => FaceDetectorInstance;
+      };
+
+      if (faceApiWindow.FaceDetector) {
+        detectorRef.current = new faceApiWindow.FaceDetector({
+          maxDetectedFaces: 1,
+          fastMode: true,
+        });
+      } else {
+        detectorRef.current = null;
+      }
+
+      setCondition("no_face");
+    } catch {
+      setCondition("camera_error");
+    }
+  }, []);
+
+  const analyzeFrame = useCallback(async () => {
+    if (step !== "capture") return;
+    if (detectingRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
+      return;
+    }
+
+    detectingRef.current = true;
+
+    try {
+      const width = 320;
+      const height = 240;
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+
+      context.drawImage(video, 0, 0, width, height);
+
+      const imageData = context.getImageData(0, 0, width, height).data;
+      let luminanceTotal = 0;
+      for (let i = 0; i < imageData.length; i += 16) {
+        const r = imageData[i] ?? 0;
+        const g = imageData[i + 1] ?? 0;
+        const b = imageData[i + 2] ?? 0;
+        luminanceTotal += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      }
+      const avgLuminance = luminanceTotal / (imageData.length / 16);
+
+      if (detectorRef.current) {
+        const faces = await detectorRef.current.detect(canvas);
+
+        if (!faces.length) {
+          setCondition(avgLuminance < 52 ? "low_light" : "no_face");
+          return;
+        }
+
+        const face = faces[0];
+        const box = face.boundingBox;
+
+        const centerX = box.x + box.width / 2;
+        const centerY = box.y + box.height / 2;
+        const offCenterX = Math.abs(centerX - width / 2) / width;
+        const offCenterY = Math.abs(centerY - height / 2) / height;
+        const faceAreaRatio = (box.width * box.height) / (width * height);
+
+        if (offCenterX > 0.18 || offCenterY > 0.2) {
+          setCondition("off_center");
+          return;
+        }
+
+        if (faceAreaRatio < 0.12) {
+          setCondition("too_far");
+          return;
+        }
+
+        if (faceAreaRatio > 0.5) {
+          setCondition("too_close");
+          return;
+        }
+
+        if (avgLuminance < 52) {
+          setCondition("low_light");
+          return;
+        }
+
+        setCondition("ready");
+        return;
+      }
+
+      setCondition(avgLuminance < 52 ? "low_light" : "ready");
+    } finally {
+      detectingRef.current = false;
+    }
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== "capture") {
+      stopCamera();
+      return;
+    }
+
+    void startCamera();
+
+    const timer = setInterval(() => {
+      void analyzeFrame();
+    }, 550);
 
     return () => {
-      window.dispatchEvent(
-        new CustomEvent("loan:merchant-strip-mode", { detail: { mode: "default" } })
-      );
+      clearInterval(timer);
+      stopCamera();
     };
-  }, []);
+  }, [analyzeFrame, startCamera, step, stopCamera]);
 
   useEffect(() => {
     if (step !== "verifying") return;
 
     const timer = setTimeout(() => {
       update({ faceVerified: true });
-      setStep("success");
-    }, 2200);
+      toast.success("Selfie verified successfully");
+      goTo(SCREENS.FINAL_OFFERS);
+    }, 3000);
 
     return () => clearTimeout(timer);
-  }, [step, update]);
+  }, [step, update, goTo]);
+
+  const handleCapture = useCallback(() => {
+    if (condition !== "ready") return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const image = canvas.toDataURL("image/jpeg", 0.9);
+
+    setCapturedImage(image);
+    setStep("review");
+  }, [condition]);
+
+  const handleRetake = useCallback(() => {
+    setCapturedImage("");
+    setStep("capture");
+  }, []);
+
+  const handleConfirmSelfie = useCallback(() => {
+    if (!capturedImage) return;
+    setStep("verifying");
+  }, [capturedImage]);
 
   if (step === "capture") {
+    const canCapture = condition === "ready";
+
     return (
       <>
-        <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-2 pb-20">
-          <img src={SELFIE_PLACEHOLDER} alt="Selfie guide" className="h-[312px] w-[312px] rounded-full" />
+        <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-3 pb-20">
+          <div className="relative h-[312px] w-[312px] overflow-hidden rounded-full border-2 border-[#e7e5e4] bg-[#f5f5f4]">
+            {condition === "camera_error" ? (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[#78716c]">
+                <Camera className="h-8 w-8" />
+                <p className="text-sm">Enable camera permission</p>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="h-full w-full object-cover [-webkit-transform:scaleX(-1)] [transform:scaleX(-1)]"
+              />
+            )}
 
-          <div className="rounded border border-[#e7e5e4] bg-[#fafaf9] px-3 py-2 text-xs text-[#1c1917]">
-            Please ensure good lighting &amp; clear face
+            <div
+              className={`pointer-events-none absolute inset-0 rounded-full border-[3px] ${
+                canCapture ? "border-[#10b981]" : "border-white/70"
+              }`}
+            />
           </div>
+
+          <p className="rounded border border-[#e7e5e4] bg-[#fafaf9] px-3 py-2 text-xs text-[#1c1917]">
+            {CONDITION_COPY[condition]}
+          </p>
+
+          <canvas ref={canvasRef} className="hidden" />
         </div>
 
         <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-[#fafaf9] px-4 py-4">
-          <Button
-            type="button"
-            onClick={() => setStep("verifying")}
-            className="h-10 w-full text-sm font-semibold"
-          >
-            Capture
-          </Button>
+          {condition === "camera_error" ? (
+            <Button type="button" onClick={() => void startCamera()} className="h-10 w-full text-sm font-semibold">
+              Retry camera access
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleCapture}
+              disabled={!canCapture}
+              className="h-10 w-full text-sm font-semibold"
+            >
+              Capture
+            </Button>
+          )}
         </div>
       </>
     );
@@ -67,14 +314,27 @@ export function S12_FaceVerification() {
     return (
       <>
         <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-2 pb-20">
-          <div className="relative h-[312px] w-[312px] overflow-hidden rounded-full">
-            <img src={SELFIE_SAMPLE} alt="Captured selfie" className="h-full w-full object-cover" />
-            <div className="absolute inset-x-0 top-1/2 h-px bg-[#10b981]" />
+          <div className="relative h-[312px] w-[312px] overflow-hidden rounded-full border border-[#e7e5e4]">
+            {capturedImage ? (
+              <img
+                src={capturedImage}
+                alt="Captured selfie"
+                className="h-full w-full object-cover [-webkit-transform:scaleX(-1)] [transform:scaleX(-1)]"
+              />
+            ) : (
+              <div className="h-full w-full bg-[#f5f5f4]" />
+            )}
+            <motion.div
+              className="absolute inset-x-0 top-1/2 h-[2px] bg-[#10b981]"
+              initial={{ y: -46 }}
+              animate={{ y: [-46, 46, -46] }}
+              transition={{ duration: 1.15, ease: "easeInOut", repeat: Infinity }}
+            />
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-white/55" />
           </div>
 
           <div className="rounded border border-[#e7e5e4] bg-[#fafaf9] px-3 py-2 text-xs text-[#1c1917]">
-            Please ensure good lighting &amp; clear face
+            Verifying your selfie...
           </div>
         </div>
 
@@ -92,31 +352,41 @@ export function S12_FaceVerification() {
     );
   }
 
-  if (step === "success") {
+  if (step === "review") {
     return (
       <>
-        <div className="flex min-h-[calc(100dvh-210px)] flex-col justify-center gap-6 pb-20">
-          <div className="mx-auto w-full max-w-[328px] space-y-6 text-center">
-            <div className="space-y-4">
-              <img src={SUCCESS_ICON} alt="Verification success" className="mx-auto h-[82px] w-[104px]" />
-              <div>
-                <h2 className="text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-[#1c1917]">
-                  Face verified successfully
-                </h2>
-                <p className="mt-2 text-sm leading-5 text-[#44403c]">
-                  We will share the KYC details with lenders selected lenders to generate final offer
-                </p>
-              </div>
-            </div>
-
-            <SelectedLendersRow lenders={data.eligibleLenders} />
+        <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-3 pb-20">
+          <div className="relative h-[312px] w-[312px] overflow-hidden rounded-full bg-[#f5f5f4]">
+            {capturedImage ? (
+              <img
+                src={capturedImage}
+                alt="Captured selfie"
+                className="h-full w-full object-cover [-webkit-transform:scaleX(-1)] [transform:scaleX(-1)]"
+              />
+            ) : (
+              <div className="h-full w-full bg-[#f5f5f4]" />
+            )}
           </div>
+
+          <p className="rounded border border-[#e7e5e4] bg-[#fafaf9] px-3 py-2 text-xs text-[#1c1917]">
+            Please ensure good lighting &amp; clear face
+          </p>
         </div>
 
         <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-[#fafaf9] px-4 py-4">
-          <Button type="button" onClick={next} className="h-10 w-full text-sm font-semibold">
-            Confirm &amp; share
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRetake}
+              className="h-10 flex-1 border-[#d6d3d1] bg-white text-sm font-semibold text-[#1c1917] hover:bg-[#f5f5f4]"
+            >
+              Re-take
+            </Button>
+            <Button type="button" onClick={handleConfirmSelfie} className="h-10 flex-1 text-sm font-semibold">
+              Submit
+            </Button>
+          </div>
         </div>
       </>
     );
@@ -124,63 +394,49 @@ export function S12_FaceVerification() {
 
   return (
     <>
-      <div className="flex flex-col gap-6 pb-44">
-        <div className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+      <motion.div
+        className="flex flex-col gap-6 pb-44"
+        variants={screenContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
 
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-[#1c1917]">
-              Complete KYC
-            </h2>
-            <p className="text-sm leading-5 text-[#78716c]">
-              Please verify your Aadhaar details and face verification to generate final offer
-            </p>
-          </div>
+        <motion.div variants={screenItem} className="space-y-1">
+          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Selfie verification</h2>
+          <p className="text-sm leading-5 text-[#78716c]">
+            Please take a clear image of your face to verify your identity and check liveliness
+          </p>
+        </motion.div>
 
-          <div className="flex items-center gap-3 py-1">
-            <div className="h-1.5 w-[72px] rounded-full bg-[#e7e5e4]">
-              <div className="h-1.5 w-full rounded-full bg-[#003323]" />
-            </div>
-            <p className="text-xs font-medium text-[#44403c]">Face verification</p>
-          </div>
-        </div>
-
-        <div className="space-y-1">
+        <motion.div variants={listContainer} className="space-y-1">
           {[
             "Find a good place and lighting",
             "Click a clear picture of the face",
             "Keep your facial expression natural",
           ].map((item) => (
-            <div key={item} className="flex items-center gap-3 rounded-lg px-1 py-2">
+            <motion.div key={item} variants={listItem} className="flex items-center gap-3 rounded-lg px-1 py-2">
               <CheckCircle2 className="h-5 w-5 text-[#10b981]" strokeWidth={2} />
-              <p className="text-sm font-semibold text-[#1c1917]">{item}</p>
-            </div>
+              <p className="text-sm text-[#1c1917]">{item}</p>
+            </motion.div>
           ))}
+        </motion.div>
+      </motion.div>
+
+      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
+        <div className="flex justify-center mb-3">
+          <StepProgressBar currentStep={3} />
         </div>
-
-        <SelectedLendersRow lenders={data.eligibleLenders} className="mt-auto" />
-      </div>
-
-      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-[#fafaf9] px-4 py-4">
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            onClick={back}
-            className="h-10 w-10 bg-[#e8fbff] text-[#0293a6] hover:bg-[#daf7fb]"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-
-          <Button
-            type="button"
-            onClick={() => setStep("capture")}
-            className="h-10 flex-1 text-sm font-semibold"
-          >
-            Take selfie
-          </Button>
+        <Button
+          type="button"
+          onClick={() => setStep("capture")}
+          className="h-10 w-full text-sm font-semibold"
+        >
+          Take selfie
+        </Button>
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#78716c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
         </div>
       </div>
     </>
