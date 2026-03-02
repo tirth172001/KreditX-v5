@@ -1,8 +1,9 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import { useLoanStore } from "@/store/loanStore";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -118,21 +119,26 @@ export function S1_ConfirmDetails() {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      firstName: data.firstName || "Tirth",
-      lastName: data.lastName || "Trivedi",
-      panNumber: data.panNumber || "CAKPT6112Q",
-      mobile: data.mobile || "9898989898",
-      email: data.email || "passport130872@gmail.com",
-      address1: data.address1 || "C1002, SP nirvana, Ghuma extension",
-      city: data.city || "Ahmedabad",
-      state: data.state || "Gujarat",
-      pincode: data.pincode || "380058",
-      monthlyIncome: data.monthlyIncome ? String(data.monthlyIncome) : "100000",
-      companyName: data.companyName || "Setu",
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+      panNumber: data.panNumber || "",
+      mobile: data.mobile || "",
+      email: data.email || "",
+      address1: data.address1 || "",
+      city: data.city || "",
+      state: data.state || "",
+      pincode: data.pincode || "",
+      monthlyIncome: data.monthlyIncome ? String(data.monthlyIncome) : "",
+      companyName: data.companyName || "",
       gender: data.gender || "",
       maritalStatus: data.maritalStatus || "",
     },
   });
+
+  const onError = (errs: FieldErrors<FormData>) => {
+    const first = Object.values(errs)[0];
+    if (first?.message) toast.error(first.message as string);
+  };
 
   const onSubmit = (formData: FormData) => {
     update({
@@ -154,7 +160,7 @@ export function S1_ConfirmDetails() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 pb-36">
+    <form onSubmit={handleSubmit(onSubmit, onError)} className="flex flex-col gap-6 pb-36">
       <Illustration />
 
       <div className="flex flex-col gap-1">

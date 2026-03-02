@@ -3,88 +3,134 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { UserRound } from "lucide-react";
-import { BottomSheet } from "@/components/loan/shared/BottomSheet";
-import { Input } from "@/components/ui/input";
-import { OTPInput } from "@/components/loan/shared/OTPInput";
+import { CheckCircle2, FileCheck2 } from "lucide-react";
 import { StepProgressBar } from "@/components/loan/shared/StepProgressBar";
-import { cn } from "@/lib/utils";
 import { useLoanStore, SCREENS } from "@/store/loanStore";
-import { screenContainer, screenItem } from "@/components/loan/shared/motion";
+import { screenContainer, screenItem, listContainer, listItem } from "@/components/loan/shared/motion";
+import { cn } from "@/lib/utils";
 
-function formatAadhaar(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 12);
-  return digits.replace(/(\d{4})(?=\d)/g, "$1-");
+type DigiStep = "intro" | "digilocker_entry" | "digilocker_otp" | "digilocker_pin" | "digilocker_consent";
+
+// ─── DigiLocker Header ────────────────────────────────────────────────────────
+
+function DigiLockerHeader() {
+  return (
+    <div className="flex w-full items-center justify-between bg-white border-b border-[#e7e5e4] px-4 py-2.5">
+      {/* MeriPehchaan logo */}
+      <div className="flex items-center gap-1.5">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#4f46e5] text-white text-[8px] font-bold">
+          मेरी
+        </div>
+        <div className="leading-none">
+          <p className="text-[8px] font-bold text-[#4f46e5]">MERI</p>
+          <p className="text-[7px] text-[#78716c]">PEHCHAAN</p>
+        </div>
+      </div>
+
+      {/* G20 India badge */}
+      <div className="flex items-center gap-0.5">
+        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f97316] text-white text-[7px] font-bold">G20</div>
+        <div className="leading-none">
+          <p className="text-[7px] text-[#78716c]">INDIA</p>
+          <p className="text-[6px] text-[#a8a29e]">2023</p>
+        </div>
+      </div>
+
+      {/* DigiLocker logo */}
+      <div className="flex items-center gap-1">
+        <div className="flex h-7 w-7 items-center justify-center rounded bg-[#1a56db] text-white text-[7px] font-bold leading-tight text-center">
+          Digi<br/>Lock
+        </div>
+        <div className="leading-none">
+          <p className="text-[8px] font-bold text-[#1a56db]">DigiLocker</p>
+          <p className="text-[6px] text-[#78716c]">Govt of India</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// ─── Aadhaar OTP bottom sheet ─────────────────────────────────────────────────
+// ─── DigiLocker wrapper ───────────────────────────────────────────────────────
 
-function AadhaarOTPSheet({
-  mobile,
-  onVerify,
-}: {
-  mobile: string;
-  onVerify: () => void;
-}) {
-  const [otp, setOtp] = useState("");
-  const [retriesLeft, setRetriesLeft] = useState(3);
-  const [isVerifying, setIsVerifying] = useState(false);
-
-  const mobileLast4 = mobile.slice(-4) || "9898";
-
-  const handleVerify = async () => {
-    if (otp.length !== 6) return;
-    setIsVerifying(true);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    toast.success("Aadhaar verified successfully");
-    onVerify();
-  };
-
+function DigiLockerWrapper({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
   return (
-    <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-white">
-      <div className="px-6 pt-6 pb-6 space-y-6">
-        <div>
-          <h3 className="text-[18px] font-semibold text-[#1c1917]">
-            OTP sent on xx{mobileLast4}
-          </h3>
-        </div>
-
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-[#0a0a0a]">Enter OTP</p>
-          <OTPInput length={6} value={otp} onChange={setOtp} fullWidth />
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => {
-                if (retriesLeft === 0) return;
-                setRetriesLeft((v) => v - 1);
-                setOtp("");
-                toast.info("OTP resent");
-              }}
-              disabled={retriesLeft === 0}
-              className="text-xs font-medium text-[#003323] disabled:text-[#78716c]/60"
-            >
-              Resend OTP
-            </button>
-            <p className="text-xs text-[#7a7a7a]">{retriesLeft} retries left</p>
-          </div>
-        </div>
-
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#f0f0f0] overflow-y-auto">
+      <DigiLockerHeader />
+      <div className="flex flex-1 flex-col items-center px-4 py-6 gap-4">
+        {children}
         <button
           type="button"
-          onClick={handleVerify}
-          disabled={otp.length !== 6 || isVerifying}
-          className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium disabled:opacity-60"
+          onClick={onBack}
+          className="mt-2 text-sm text-[#1a56db] underline"
         >
-          {isVerifying ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Verifying…
-            </span>
-          ) : "Verify OTP"}
+          Return to Chroma
         </button>
       </div>
     </div>
+  );
+}
+
+// ─── Captcha SVG art ──────────────────────────────────────────────────────────
+
+function CaptchaImage() {
+  return (
+    <div className="flex h-10 w-full items-center justify-center rounded border border-[#e7e5e4] bg-[#fce7f3] overflow-hidden select-none">
+      <svg width="120" height="30" viewBox="0 0 120 30" fill="none">
+        <path d="M8 22 C12 10, 18 8, 22 18" stroke="#c026d3" strokeWidth="2.5" strokeLinecap="round"/>
+        <path d="M28 8 L32 22 M28 15 L36 15" stroke="#9333ea" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M40 8 C44 8, 46 10, 46 14 C46 18, 44 20, 40 20 L40 22" stroke="#db2777" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M52 8 L56 22 M52 22 L60 22 M52 8 L60 8" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M66 15 C66 10, 70 8, 74 8 C78 8, 80 10, 80 14 C80 18, 78 22, 74 22 C70 22, 66 20, 66 15Z" stroke="#be185d" strokeWidth="2"/>
+        <path d="M86 8 L90 22 L94 14 L98 22 L102 8" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M108 8 L112 15 L108 22 M108 15 L116 15" stroke="#a21caf" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    </div>
+  );
+}
+
+// ─── DigiLocker Card ──────────────────────────────────────────────────────────
+
+function DigiCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full max-w-[340px] rounded-xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.12)] overflow-hidden">
+      {/* Card title bar */}
+      <div className="bg-[#1a56db] px-4 py-2.5">
+        <p className="text-sm font-semibold text-white">Chroma</p>
+      </div>
+      <div className="px-5 py-5 space-y-4">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function TextInput({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
+  return (
+    <div className="space-y-1.5">
+      {label && <p className="text-xs font-medium text-[#44403c]">{label}</p>}
+      <input
+        {...props}
+        className={cn(
+          "w-full h-9 px-3 text-sm bg-white border border-[#d4d4d4] rounded-lg outline-none",
+          "focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db]/20",
+          "placeholder:text-[#a8a29e]",
+          props.className
+        )}
+      />
+    </div>
+  );
+}
+
+function GreenButton({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full h-10 rounded-lg bg-[#15803d] text-white text-sm font-semibold disabled:opacity-60"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -92,138 +138,227 @@ function AadhaarOTPSheet({
 
 export function S11_AadhaarKYC() {
   const { data, update, goTo } = useLoanStore();
-  const [aadhaarNumber, setAadhaarNumber] = useState(
-    formatAadhaar(data.aadhaarNumber || "3238585746895")
-  );
-  const [error, setError] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [otpSheetOpen, setOtpSheetOpen] = useState(false);
+  const [step, setStep] = useState<DigiStep>("intro");
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [otpInput, setOtpInput] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleVerify = async () => {
-    const digits = aadhaarNumber.replace(/\D/g, "");
-    if (digits.length !== 12) {
-      setError("Please enter a valid 12-digit Aadhaar number");
-      return;
-    }
-    setError("");
-    setIsSending(true);
-    toast.info("OTP sent to your Aadhaar registered number");
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    update({ aadhaarNumber: digits });
-    setIsSending(false);
-    setOtpSheetOpen(true);
-  };
+  const mobileLast4 = (data.mobile || "9898989898").slice(-4);
 
-  const handleOtpVerified = () => {
+  // ─── Intro ──────────────────────────────────────────────────────────────────
+
+  if (step === "intro") {
+    return (
+      <>
+        <motion.div
+          className="flex flex-col gap-6 pb-44"
+          variants={screenContainer}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+
+          <motion.div variants={screenItem} className="space-y-1">
+            <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Aadhaar verification</h2>
+            <p className="text-sm leading-5 text-[#78716c]">
+              Provide your Aadhaar number and verify it using OTP sent on your registered number
+            </p>
+          </motion.div>
+
+          <motion.div variants={listContainer} className="space-y-1">
+            {[
+              "You will be redirected to DigiLocker",
+              "Provide your Aadhar number",
+              "Verify using OTP & provide 4 digit pin",
+            ].map((item) => (
+              <motion.div key={item} variants={listItem} className="flex items-center gap-3 rounded-lg px-1 py-2">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#10b981]" strokeWidth={2} />
+                <p className="text-sm text-[#1c1917]">{item}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.div>
+
+        {/* Footer */}
+        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
+          <div className="flex justify-center mb-3">
+            <StepProgressBar currentStep={2} />
+          </div>
+          <button
+            type="button"
+            onClick={() => setStep("digilocker_entry")}
+            className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium"
+          >
+            Verify Aadhaar
+          </button>
+          <div className="mt-2 flex items-center justify-center gap-1.5">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#78716c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ─── DigiLocker Entry ────────────────────────────────────────────────────────
+
+  if (step === "digilocker_entry") {
+    return (
+      <DigiLockerWrapper onBack={() => setStep("intro")}>
+        <DigiCard>
+          <p className="text-xs text-[#44403c] leading-5">
+            You are about to link your DigiLocker account with <strong>Chroma</strong> application of Chroma Technologies Pvt Ltd. You will be signed up for DigiLocker account if it does not exist.
+          </p>
+
+          <TextInput
+            label="Mobile number"
+            value={data.mobile || ""}
+            readOnly
+            className="bg-[#f9fafb]"
+          />
+
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-[#44403c]">CAPTCHA verification</p>
+            <CaptchaImage />
+            <TextInput
+              placeholder="Enter captcha"
+              value={captchaInput}
+              onChange={(e) => setCaptchaInput(e.target.value)}
+            />
+          </div>
+
+          <GreenButton onClick={() => { setCaptchaInput(""); setOtpInput(""); setStep("digilocker_otp"); }}>
+            Next
+          </GreenButton>
+        </DigiCard>
+      </DigiLockerWrapper>
+    );
+  }
+
+  // ─── DigiLocker OTP ──────────────────────────────────────────────────────────
+
+  if (step === "digilocker_otp") {
+    const handleContinue = async () => {
+      setIsLoading(true);
+      await new Promise((r) => setTimeout(r, 1200));
+      setIsLoading(false);
+      setOtpInput("");
+      setStep("digilocker_pin");
+    };
+
+    return (
+      <DigiLockerWrapper onBack={() => setStep("intro")}>
+        <DigiCard>
+          <p className="text-xs text-[#44403c] leading-5">
+            UIDAI has sent a temporary OTP to your mobile ending in <strong>*******{mobileLast4}</strong> (valid for 10 mins).
+          </p>
+
+          <TextInput
+            label="Enter OTP"
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder="••••••"
+            value={otpInput}
+            onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          />
+
+          <div className="rounded-lg bg-[#fef9c3] border border-[#fde047] px-3 py-2">
+            <p className="text-xs text-[#854d0e]">
+              Wait few minutes for the OTP, <strong>do not refresh or close!</strong>
+            </p>
+          </div>
+
+          <GreenButton onClick={handleContinue} disabled={otpInput.length !== 6 || isLoading}>
+            {isLoading ? "Verifying…" : "Continue"}
+          </GreenButton>
+        </DigiCard>
+      </DigiLockerWrapper>
+    );
+  }
+
+  // ─── DigiLocker PIN ──────────────────────────────────────────────────────────
+
+  if (step === "digilocker_pin") {
+    const handleContinue = async () => {
+      setIsLoading(true);
+      await new Promise((r) => setTimeout(r, 900));
+      setIsLoading(false);
+      setStep("digilocker_consent");
+    };
+
+    return (
+      <DigiLockerWrapper onBack={() => setStep("intro")}>
+        <DigiCard>
+          <p className="text-xs text-[#44403c]">You are already registered with DigiLocker.</p>
+          <p className="text-sm font-medium text-[#1c1917]">Please enter your 6 digit DigiLocker Security PIN</p>
+
+          <TextInput
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder="••••••"
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          />
+
+          <button type="button" className="text-xs text-[#1a56db] text-left">
+            Forgot security PIN?
+          </button>
+
+          <GreenButton onClick={handleContinue} disabled={pinInput.length !== 6 || isLoading}>
+            {isLoading ? "Verifying…" : "Continue"}
+          </GreenButton>
+        </DigiCard>
+      </DigiLockerWrapper>
+    );
+  }
+
+  // ─── DigiLocker Consent ──────────────────────────────────────────────────────
+
+  const handleAllow = async () => {
+    setIsLoading(true);
+    await new Promise((r) => setTimeout(r, 1200));
     update({ aadhaarVerified: true });
-    setOtpSheetOpen(false);
+    toast.success("Aadhaar verified successfully");
     goTo(SCREENS.FACE_VERIFICATION);
   };
 
   return (
-    <>
-      <motion.div
-        className="flex flex-col gap-6 pb-44"
-        variants={screenContainer}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
-
-        <motion.div variants={screenItem} className="space-y-1">
-          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Aadhaar verification</h2>
-          <p className="text-sm leading-5 text-[#78716c]">
-            Provide your Aadhaar number and verify it using OTP sent on your registered number
+    <DigiLockerWrapper onBack={() => setStep("intro")}>
+      <DigiCard>
+        <div className="flex flex-col items-center gap-3 py-2">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6ff]">
+            <FileCheck2 className="h-7 w-7 text-[#1a56db]" strokeWidth={1.5} />
+          </div>
+          <p className="text-center text-sm text-[#44403c] leading-5">
+            You are providing your consent to share your Digilocker document with <strong>Chroma</strong>.
           </p>
-        </motion.div>
-
-        {/* Aadhaar card */}
-        <motion.div
-          variants={screenItem}
-          className="rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.1)]"
-        >
-          {/* Card header */}
-          <div className="flex items-center gap-2 pb-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#003323]/10 text-[8px] font-bold text-[#003323]">
-              GOI
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <div className="flex flex-col gap-0.5">
-                <div className="h-2 w-full bg-gradient-to-r from-[#f8a628] via-[#f8a628]/50 to-transparent rounded" />
-                <div className="h-2 bg-white" />
-                <div className="h-2 w-full bg-gradient-to-r from-[#259c4d] via-[#259c4d]/50 to-transparent rounded" />
-              </div>
-            </div>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#8B1A1A] text-[7px] font-bold text-white leading-tight text-center">
-              AADH<br/>AAR
-            </div>
-          </div>
-
-          {/* User info */}
-          <div className="flex gap-3 mb-4">
-            <div className="flex h-14 w-12 shrink-0 items-center justify-center rounded-md bg-[#003323]/10">
-              <UserRound className="h-7 w-7 text-[#003323]" strokeWidth={1.5} />
-            </div>
-            <div className="space-y-0.5 text-xs text-[#1c1917]">
-              <p><span className="text-[#78716c]">Name:  </span><span className="font-medium">{`${data.firstName || "Tirth"} ${data.lastName || "Trivedi"}`}</span></p>
-              <p><span className="text-[#78716c]">Gender: </span><span className="font-medium">{data.gender || "Male"}</span></p>
-              <p><span className="text-[#78716c]">DOB:  </span><span className="font-medium">17/06/2001</span></p>
-            </div>
-          </div>
-
-          {/* Aadhaar input */}
-          <div className="space-y-2">
-            <Input
-              value={aadhaarNumber}
-              onChange={(e) => {
-                setAadhaarNumber(formatAadhaar(e.target.value));
-                if (error) setError("");
-              }}
-              inputMode="numeric"
-              placeholder="0000-0000-0000"
-              className={cn(
-                "h-10 rounded-lg border-[#e7e5e4] bg-[#fafaf9] text-base text-[#1c1917]",
-                error && "border-[#dc2626]"
-              )}
-            />
-            {error && <p className="text-xs text-[#dc2626]">{error}</p>}
-          </div>
-
-          <div className="mt-4 border-t border-[#e7e5e4]" />
-          <p className="mt-3 text-xs text-[#78716c]">OTP will be shared to Aadhaar registered number</p>
-        </motion.div>
-      </motion.div>
-
-      {/* Footer */}
-      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
-        <div className="flex justify-center mb-3">
-          <StepProgressBar currentStep={2} />
         </div>
+
         <button
           type="button"
-          onClick={handleVerify}
-          disabled={isSending}
-          className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium disabled:opacity-60"
+          onClick={handleAllow}
+          disabled={isLoading}
+          className="w-full h-10 rounded-lg bg-[#4f46e5] text-white text-sm font-semibold disabled:opacity-60"
         >
-          {isSending ? (
+          {isLoading ? (
             <span className="flex items-center justify-center gap-2">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Sending OTP…
+              Processing…
             </span>
-          ) : "Verify Aadhaar"}
+          ) : "Allow"}
         </button>
-        <div className="mt-2 flex items-center justify-center gap-1.5">
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#78716c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
-        </div>
-      </div>
 
-      <BottomSheet open={otpSheetOpen} onClose={() => setOtpSheetOpen(false)}>
-        <AadhaarOTPSheet
-          mobile={data.mobile}
-          onVerify={handleOtpVerified}
-        />
-      </BottomSheet>
-    </>
+        <button
+          type="button"
+          onClick={() => setStep("intro")}
+          className="w-full text-sm text-[#78716c] text-center py-1"
+        >
+          Deny
+        </button>
+      </DigiCard>
+    </DigiLockerWrapper>
   );
 }

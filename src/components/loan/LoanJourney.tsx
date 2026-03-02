@@ -85,11 +85,16 @@ export function LoanJourney() {
       position="top-center"
       toastOptions={{
         classNames: {
-          toast: "!rounded-xl !text-sm !font-medium",
-          success: "!bg-[#ecfdf3] !text-[#065f46] !border-[#a7f3d0]",
-          error: "!bg-[#fef2f2] !text-[#991b1b] !border-[#fecaca]",
-          info: "!bg-[#eff6ff] !text-[#1e40af] !border-[#bfdbfe]",
+          toast: "!bg-[#111] !text-white !border-transparent !rounded-2xl !shadow-xl !text-[13px] !font-medium",
+          success: "!bg-[#111] !text-white",
+          error:   "!bg-[#111] !text-white",
+          info:    "!bg-[#111] !text-white",
         },
+      }}
+      icons={{
+        success: <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#10b981] text-white text-[9px] font-bold">✓</span>,
+        error:   <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#ef4444] text-white text-[9px] font-bold">✕</span>,
+        info:    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#3b82f6] text-white text-[9px] font-bold">i</span>,
       }}
     />
     </>

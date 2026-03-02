@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
 import { useLoanStore } from "@/store/loanStore";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -39,7 +38,6 @@ export function S6_BankSelection() {
 
   const handleFindAccounts = async () => {
     setIsLoading(true);
-    toast.info("Looking for your linked accounts…");
     await new Promise((resolve) => setTimeout(resolve, 1400));
     next();
   };

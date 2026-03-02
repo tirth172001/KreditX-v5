@@ -53,9 +53,12 @@ export function S16_SelectAutopay() {
   }, [setMerchantStripMode]);
 
   const emi = data.finalEMI || 4800;
-  const loanAmount = data.finalLoanAmount || 500000;
   const upiApp = data.autopayApp || "bhim";
   const appLabel = upiApp === "bhim" ? "BHIM" : upiApp.charAt(0).toUpperCase() + upiApp.slice(1);
+
+  const tenure = data.selectedTenure || 9;
+  const endDate = new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+    .format(new Date(new Date().setMonth(new Date().getMonth() + tenure)));
 
   const handleNumpad = (key: string) => {
     if (key === "back") {
@@ -121,11 +124,11 @@ export function S16_SelectAutopay() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-xs text-[#8e8e93]">Frequency</p>
-              <p className="mt-0.5 text-sm font-medium text-white">As presented</p>
+              <p className="mt-0.5 text-sm font-medium text-white">Monthly</p>
             </div>
             <div>
               <p className="text-xs text-[#8e8e93]">Valid until</p>
-              <p className="mt-0.5 text-sm font-medium text-white">25/12/2030</p>
+              <p className="mt-0.5 text-sm font-medium text-white">{endDate}</p>
             </div>
           </div>
 
@@ -276,7 +279,7 @@ export function S16_SelectAutopay() {
         <div>
           <p className="text-sm font-medium text-white/80">Mandate created</p>
           <div className="mt-1 mx-auto inline-block rounded bg-[#005a2b] px-4 py-1.5">
-            <p className="text-2xl font-bold tracking-wide text-white">{formatINR(loanAmount)}</p>
+            <p className="text-2xl font-bold tracking-wide text-white">{formatINR(emi)}</p>
           </div>
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#005a2b] px-3 py-1">

@@ -454,7 +454,7 @@ export function S9_PerBankOTP() {
                     OTP sent to number ending with {otpPhoneLast4}
                   </p>
 
-                  <OTPInput length={6} value={otp} onChange={setOtp} fullWidth />
+                  <OTPInput length={6} value={otp} onChange={setOtp} onComplete={verifyCurrentBank} fullWidth />
 
                   <div className="flex items-center justify-between">
                     <button

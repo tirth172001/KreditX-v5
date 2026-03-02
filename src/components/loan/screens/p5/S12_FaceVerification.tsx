@@ -314,23 +314,49 @@ export function S12_FaceVerification() {
     return (
       <>
         <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-2 pb-20">
-          <div className="relative h-[312px] w-[312px] overflow-hidden rounded-full border border-[#e7e5e4]">
-            {capturedImage ? (
-              <img
-                src={capturedImage}
-                alt="Captured selfie"
-                className="h-full w-full object-cover [-webkit-transform:scaleX(-1)] [transform:scaleX(-1)]"
-              />
-            ) : (
-              <div className="h-full w-full bg-[#f5f5f4]" />
-            )}
+          <div className="relative h-[312px] w-[312px]">
+            {/* Rotating arc border */}
             <motion.div
-              className="absolute inset-x-0 top-1/2 h-[2px] bg-[#10b981]"
-              initial={{ y: -46 }}
-              animate={{ y: [-46, 46, -46] }}
-              transition={{ duration: 1.15, ease: "easeInOut", repeat: Infinity }}
+              className="absolute inset-[-3px] rounded-full"
+              style={{
+                background: "conic-gradient(from 0deg, #10b981 0deg, #10b981 90deg, transparent 90deg, transparent 360deg)",
+              }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
             />
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-white/55" />
+            {/* Inner circle clip */}
+            <div className="absolute inset-[3px] overflow-hidden rounded-full border border-[#e7e5e4] bg-[#f5f5f4]">
+              {capturedImage ? (
+                <img
+                  src={capturedImage}
+                  alt="Captured selfie"
+                  className="h-full w-full object-cover [-webkit-transform:scaleX(-1)] [transform:scaleX(-1)]"
+                />
+              ) : (
+                <div className="h-full w-full bg-[#f5f5f4]" />
+              )}
+
+              {/* Sweeping gradient bar */}
+              <motion.div
+                className="absolute inset-x-0 h-20 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, transparent, rgba(16,185,129,0.25), rgba(255,255,255,0.4), rgba(16,185,129,0.25), transparent)",
+                }}
+                initial={{ top: "-20%" }}
+                animate={{ top: ["-20%", "110%", "-20%"] }}
+                transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity }}
+              />
+            </div>
+
+            {/* Corner brackets — NW */}
+            <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-[#10b981] rounded-tl-sm" />
+            {/* NE */}
+            <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-[#10b981] rounded-tr-sm" />
+            {/* SW */}
+            <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-[#10b981] rounded-bl-sm" />
+            {/* SE */}
+            <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-[#10b981] rounded-br-sm" />
           </div>
 
           <div className="rounded border border-[#e7e5e4] bg-[#fafaf9] px-3 py-2 text-xs text-[#1c1917]">

@@ -2,14 +2,121 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { calcEMI, formatINR, cn } from "@/lib/utils";
 import { useLoanStore, SCREENS } from "@/store/loanStore";
 import { screenContainer, screenItem } from "@/components/loan/shared/motion";
+import { BottomSheet } from "@/components/loan/shared/BottomSheet";
 
 const MIN_LOAN_AMOUNT = 50000;
 const TENURE_OPTIONS = [9, 6, 3];
+
+// ─── Amortization helper ──────────────────────────────────────────────────────
+
+function computeAmortizationRow(principal: number, months: number, annualRate: number, month: number) {
+  const r = annualRate / 12 / 100;
+  const emi = Math.round((principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1));
+  let outstanding = principal;
+  let principalPaid = 0;
+  let interest = 0;
+  for (let i = 0; i < month; i++) {
+    interest = Math.round(outstanding * r);
+    principalPaid = emi - interest;
+    outstanding = Math.max(0, outstanding - principalPaid);
+  }
+  return { emi, interest, principalPaid, outstanding };
+}
+
+// ─── KFS Content ─────────────────────────────────────────────────────────────
+
+function KFSContent({
+  lender,
+  firstName,
+  lastName,
+  loanAmount,
+  tenure,
+  emi,
+  processingFee,
+  interestCharged,
+  totalPayable,
+  appId,
+}: {
+  lender: { name: string; rate: number };
+  firstName: string;
+  lastName: string;
+  loanAmount: number;
+  tenure: number;
+  emi: number;
+  processingFee: number;
+  interestCharged: number;
+  totalPayable: number;
+  appId: string;
+}) {
+  const lenderDomain = lender.name.toLowerCase().replace(/\s+/g, "") + ".com";
+
+  const row1 = computeAmortizationRow(loanAmount, tenure, lender.rate, 1);
+  const row2 = computeAmortizationRow(loanAmount, tenure, lender.rate, 2);
+  const row3 = computeAmortizationRow(loanAmount, tenure, lender.rate, 3);
+
+  const line = "─────────────────────────────────────";
+
+  return (
+    <pre className="whitespace-pre-wrap font-mono text-[11px] text-[#1c1917] leading-5">
+{`KEY FACT STATEMENT (KFS)
+As per RBI Guidelines on Digital Lending (2022)
+
+LENDER DETAILS
+${line}
+Lender Name:      ${lender.name}
+Borrower Name:    ${firstName} ${lastName}
+Loan Product:     Instant Personal Loan
+Application ID:   KX${appId}
+
+LOAN SUMMARY
+${line}
+Sanctioned Amount      ${formatINR(loanAmount)}
+Loan Tenure            ${tenure} months
+Annual Rate (APR)      ${lender.rate}% p.a. (reducing balance)
+Monthly EMI            ${formatINR(emi)}
+First EMI Date         2nd of next month
+Processing Fee         ${formatINR(processingFee)} (deducted upfront)
+Total Interest         ${formatINR(interestCharged)}
+Total Payable          ${formatINR(totalPayable)}
+
+FEES & CHARGES
+${line}
+Processing Fee         ${formatINR(processingFee)} (one-time, non-refundable)
+Prepayment Charges     Nil after payment of 3 EMIs
+Foreclosure Charges    2% of outstanding principal (within 3 months)
+Late Payment Penalty   ₹500 per missed EMI
+Bounce / ECS Charges   ₹500 per bounce instance
+Stamp Duty             As per applicable state law
+
+REPAYMENT SCHEDULE (Indicative — First 3 Months)
+${line}
+Month 1  Principal ${formatINR(row1.principalPaid)}   Interest ${formatINR(row1.interest)}   Outstanding ${formatINR(row1.outstanding)}
+Month 2  Principal ${formatINR(row2.principalPaid)}   Interest ${formatINR(row2.interest)}   Outstanding ${formatINR(row2.outstanding)}
+Month 3  Principal ${formatINR(row3.principalPaid)}   Interest ${formatINR(row3.interest)}   Outstanding ${formatINR(row3.outstanding)}
+
+BORROWER RIGHTS
+${line}
+• Cooling-off period: 3 business days from disbursement to cancel without penalty
+• Right to prepay after 3 EMIs without foreclosure charges
+• Right to receive a copy of this KFS before loan disbursal
+• Grievance: grievances@${lenderDomain} | 1800-XXX-XXXX (Toll-free)
+• RBI Ombudsman: https://rbi.org.in/Scripts/Complaints.aspx
+
+DECLARATION
+${line}
+By accepting, I confirm I have read and understood this Key Fact Statement and agree to the Loan Agreement, Privacy Policy, and Terms & Conditions of ${lender.name}.
+
+This KFS is issued pursuant to RBI Master Direction – Reserve Bank of India (Regulatory Framework for Microfinance Loans) Directions, 2022.`}
+    </pre>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function S14_ConfirmOffer() {
   const { data, update, goTo } = useLoanStore();
@@ -31,6 +138,11 @@ export function S14_ConfirmOffer() {
   const [selectedLoanAmount, setSelectedLoanAmount] = useState(maxAmount);
   const [selectedTenure, setSelectedTenure] = useState(TENURE_OPTIONS[0]);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [showTotal, setShowTotal] = useState(true);
+  const [kfsOpen, setKfsOpen] = useState(false);
+
+  // stable app id
+  const [appId] = useState(() => String(Math.floor(10000000 + Math.random() * 90000000)));
 
   const tenureBreakdown = useMemo(() => {
     if (!lender) return [];
@@ -42,12 +154,24 @@ export function S14_ConfirmOffer() {
     });
   }, [lender, selectedLoanAmount]);
 
+  const selectedBreakdown = tenureBreakdown.find((t) => t.months === selectedTenure) ?? tenureBreakdown[0];
+
   const handleConfirm = async () => {
     if (!lender) return;
     setIsConfirming(true);
     await new Promise((r) => setTimeout(r, 800));
-    const emi = calcEMI(selectedLoanAmount, selectedTenure, lender.rate);
-    update({ selectedTenure, finalLoanAmount: selectedLoanAmount, finalEMI: emi });
+    setIsConfirming(false);
+    setKfsOpen(true);
+  };
+
+  const handleAccept = () => {
+    if (!lender || !selectedBreakdown) return;
+    update({
+      selectedTenure,
+      finalLoanAmount: selectedLoanAmount,
+      finalEMI: selectedBreakdown.emi,
+    });
+    setKfsOpen(false);
     goTo(SCREENS.SETUP_AUTOREPAYMENT);
   };
 
@@ -63,15 +187,15 @@ export function S14_ConfirmOffer() {
       >
         <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
 
-        {/* Lender header */}
-        <motion.div variants={screenItem} className="flex items-center gap-3">
+        {/* Lender header — centered */}
+        <motion.div variants={screenItem} className="flex flex-col items-center gap-2">
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+            className="flex h-14 w-14 items-center justify-center rounded-full text-[13px] font-bold text-white shadow-sm"
             style={{ backgroundColor: lender.color }}
           >
             {lender.logoInitial}
           </div>
-          <div>
+          <div className="text-center">
             <h2 className="text-[18px] font-semibold text-[#1c1917]">{lender.name}</h2>
             <p className="text-xs text-[#78716c]">Interest rate: {lender.rate}% p.a.</p>
           </div>
@@ -110,7 +234,33 @@ export function S14_ConfirmOffer() {
         >
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-[#1c1917]">Select tenure</p>
-            <p className="text-xs text-[#78716c]">Processing fee: {formatINR(lender.processingFee)}</p>
+            {/* Total / Interest toggle pill */}
+            <div className="flex items-center rounded-lg bg-[#f5f5f4] p-0.5">
+              <button
+                type="button"
+                onClick={() => setShowTotal(true)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  showTotal ? "bg-white text-[#1c1917] shadow-sm" : "text-[#78716c]"
+                )}
+              >
+                Total
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTotal(false)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  !showTotal ? "bg-white text-[#1c1917] shadow-sm" : "text-[#78716c]"
+                )}
+              >
+                Interest
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end">
+            <p className="text-xs text-[#78716c]">EMI per month</p>
           </div>
 
           {tenureBreakdown.map((option) => {
@@ -138,15 +288,17 @@ export function S14_ConfirmOffer() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-[#1c1917]">{formatINR(option.emi)}/mo</p>
-                  <p className="text-xs text-[#78716c]">Total: {formatINR(option.totalPayable)}</p>
+                  <p className="text-xs text-[#78716c]">
+                    {showTotal
+                      ? formatINR(option.totalPayable)
+                      : formatINR(option.interestCharged)}
+                  </p>
                 </div>
               </button>
             );
           })}
 
-          <button type="button" className="text-xs font-medium text-[#0293a6]">
-            View full KFS
-          </button>
+          <p className="text-xs text-[#78716c]">Processing fees: {formatINR(lender.processingFee)}</p>
         </motion.div>
       </motion.div>
 
@@ -175,6 +327,57 @@ export function S14_ConfirmOffer() {
           </button>
         </div>
       </div>
+
+      {/* KFS Bottom Sheet — non-dismissible via backdrop */}
+      <BottomSheet open={kfsOpen}>
+        <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-white">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-[#e7e5e4] px-5 py-3">
+            <p className="text-sm font-semibold text-[#1c1917]">Terms &amp; conditions</p>
+            <div className="flex items-center gap-2">
+              <span className="rounded border border-[#e7e5e4] px-2 py-0.5 text-[11px] text-[#78716c]">
+                ENGLISH ▾
+              </span>
+              <button
+                type="button"
+                onClick={() => setKfsOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f5f5f4] text-[#78716c]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="overflow-y-auto max-h-[55vh] px-5 py-4 bg-[#fafaf9]">
+            {selectedBreakdown && (
+              <KFSContent
+                lender={lender}
+                firstName={data.firstName || "Applicant"}
+                lastName={data.lastName || ""}
+                loanAmount={selectedLoanAmount}
+                tenure={selectedTenure}
+                emi={selectedBreakdown.emi}
+                processingFee={lender.processingFee}
+                interestCharged={selectedBreakdown.interestCharged}
+                totalPayable={selectedBreakdown.totalPayable}
+                appId={appId}
+              />
+            )}
+          </div>
+
+          {/* Accept footer */}
+          <div className="border-t border-[#e7e5e4] px-5 py-4">
+            <button
+              type="button"
+              onClick={handleAccept}
+              className="w-full h-11 rounded-lg bg-[#003323] text-white text-sm font-semibold"
+            >
+              Accept &amp; proceed
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </>
   );
 }

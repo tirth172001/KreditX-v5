@@ -28,6 +28,8 @@ export function S20_Success() {
   const mobile = data.mobile || "9876543210";
   const mobileLast4 = mobile.slice(-4);
   const loanAmount = data.finalLoanAmount || 500000;
+  const finalEMI = data.finalEMI || 0;
+  const selectedTenure = data.selectedTenure || 9;
 
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) return;
@@ -135,34 +137,50 @@ export function S20_Success() {
 
         <motion.div variants={screenItem} className="space-y-1">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
-            Transfer amount in your bank
+            Get {formatINR(loanAmount)} in your bank account
           </h2>
           <p className="text-sm leading-5 text-[#78716c]">
-            We will transfer {formatINR(loanAmount)} to your selected bank account.
+            Please provide OTP to transfer the fund in your bank account
           </p>
         </motion.div>
 
+        {/* Loan summary card */}
         <motion.div
           variants={screenItem}
-          className="rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.1)]"
+          className="rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.1)] space-y-3"
         >
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-[#1c1917]">Bank account</p>
-          </div>
-          <div className="h-px bg-[#e7e5e4] mb-4" />
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e0f9ff] text-xs font-bold text-[#0369a1]">
-              CB
+          <p className="text-sm font-semibold text-[#1c1917]">Loan summary</p>
+          <div className="h-px bg-[#e7e5e4]" />
+          {[
+            { label: "Loan amount", value: formatINR(loanAmount) },
+            { label: "EMI amount", value: `${finalEMI ? formatINR(finalEMI) : "—"}/month` },
+            { label: "Tenure", value: `${selectedTenure} months` },
+            { label: "EMI date", value: "2nd of every month" },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between">
+              <p className="text-xs text-[#78716c]">{label}</p>
+              <p className="text-sm font-medium text-[#1c1917]">{value}</p>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-[#1c1917]">
-                {data.repaymentBankAccount || "Canara Bank"}
-              </p>
-              <p className="text-xs text-[#78716c]">
-                Savings account • xx{data.repaymentBankMasked || "8234"}
-              </p>
+          ))}
+        </motion.div>
+
+        {/* Bank details card */}
+        <motion.div
+          variants={screenItem}
+          className="rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.1)] space-y-3"
+        >
+          <p className="text-sm font-semibold text-[#1c1917]">Bank details</p>
+          <div className="h-px bg-[#e7e5e4]" />
+          {[
+            { label: "Bank", value: data.repaymentBankAccount || "Canara Bank" },
+            { label: "Bank account", value: data.repaymentAccountNumber || "CAN001234" },
+            { label: "IFSC", value: data.repaymentIFSC || "CNRB0001234" },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between">
+              <p className="text-xs text-[#78716c]">{label}</p>
+              <p className="text-sm font-medium text-[#1c1917]">{value}</p>
             </div>
-          </div>
+          ))}
         </motion.div>
       </motion.div>
 
@@ -172,13 +190,8 @@ export function S20_Success() {
           onClick={() => setOtpSheetOpen(true)}
           className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium"
         >
-          Transfer amount
+          Get loan amount
         </button>
-        <div className="mt-3 text-center">
-          <button type="button" onClick={reset} className="text-sm text-[#78716c] underline">
-            Restart flow
-          </button>
-        </div>
       </div>
 
       <BottomSheet open={otpSheetOpen} onClose={() => setOtpSheetOpen(false)}>
@@ -192,7 +205,7 @@ export function S20_Success() {
             </div>
             <div className="space-y-3">
               <p className="text-sm font-medium text-[#0a0a0a]">Enter OTP</p>
-              <OTPInput length={6} value={otp} onChange={setOtp} fullWidth />
+              <OTPInput length={6} value={otp} onChange={setOtp} onComplete={handleVerifyOtp} fullWidth />
             </div>
             <button
               type="button"

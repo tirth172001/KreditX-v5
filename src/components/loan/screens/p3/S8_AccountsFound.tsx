@@ -84,7 +84,7 @@ export function S8_AccountsFound() {
         <motion.div variants={screenItem} className="space-y-2">
           <p className="text-sm font-medium text-[#1c1917]">Enter OTP</p>
 
-          <OTPInput length={6} value={otp} onChange={setOtp} fullWidth />
+          <OTPInput length={6} value={otp} onChange={setOtp} onComplete={handleVerify} fullWidth />
 
           <div className="flex items-center justify-between">
             <button
