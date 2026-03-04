@@ -157,6 +157,10 @@ export function S11_AadhaarKYC() {
           initial="hidden"
           animate="show"
         >
+          <motion.div variants={screenItem} className="flex justify-center">
+            <StepProgressBar currentStep={2} />
+          </motion.div>
+
           <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
             <img src="/illustrations/aadhaar_verification.svg" alt="" className="h-full w-full object-cover" />
           </motion.div>
@@ -164,15 +168,15 @@ export function S11_AadhaarKYC() {
           <motion.div variants={screenItem} className="space-y-1">
             <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Aadhaar verification</h2>
             <p className="text-sm leading-5 text-[#78716c]">
-              Provide your Aadhaar number and verify it using OTP sent on your registered number
+              Verify your identity via DigiLocker — quick, secure, and paperless
             </p>
           </motion.div>
 
           <motion.div variants={listContainer} className="space-y-1">
             {[
-              "You will be redirected to DigiLocker",
-              "Provide your Aadhar number",
-              "Verify using OTP & provide 4 digit pin",
+              "You'll be redirected to DigiLocker",
+              "Enter your Aadhaar number",
+              "Verify with OTP and your 6-digit security PIN",
             ].map((item) => (
               <motion.div key={item} variants={listItem} className="flex items-center gap-3 rounded-lg px-1 py-2">
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-[#10b981]" strokeWidth={2} />
@@ -184,9 +188,6 @@ export function S11_AadhaarKYC() {
 
         {/* Footer */}
         <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
-          <div className="flex justify-center mb-3">
-            <StepProgressBar currentStep={2} />
-          </div>
           <button
             type="button"
             onClick={() => setStep("digilocker_entry")}

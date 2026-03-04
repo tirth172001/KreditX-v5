@@ -25,6 +25,10 @@ export function S10_IndicativeOffers() {
         initial="hidden"
         animate="show"
       >
+        <motion.div variants={screenItem} className="flex justify-center">
+          <StepProgressBar currentStep={4} />
+        </motion.div>
+
         <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
           <img src="/illustrations/eligible_lenders.svg" alt="" className="h-full w-full object-cover" />
         </motion.div>
@@ -32,7 +36,7 @@ export function S10_IndicativeOffers() {
         <motion.div variants={screenItem} className="space-y-1">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Your loan offers</h2>
           <p className="text-sm leading-5 text-[#78716c]">
-            We've generated final loan offers based on your profile. Select an offer to proceed.
+            Here are personalised offers based on your profile. Tap one to review and customise.
           </p>
         </motion.div>
 
@@ -81,11 +85,6 @@ export function S10_IndicativeOffers() {
         </motion.div>
       </motion.div>
 
-      <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
-        <div className="flex justify-center">
-          <StepProgressBar currentStep={4} />
-        </div>
-      </div>
     </>
   );
 }

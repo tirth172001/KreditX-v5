@@ -55,10 +55,10 @@ export function S6_BankSelection() {
 
         <motion.div variants={screenItem} className="space-y-2">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
-            Select banks with an savings account
+            Select your banks
           </h2>
           <p className="text-sm leading-5 text-[#78716c]">
-            Please select all banks where you have the accounts for better loan offer
+            Choose banks where you have an active savings account to unlock better loan offers
           </p>
         </motion.div>
 
@@ -102,7 +102,7 @@ export function S6_BankSelection() {
 
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 border-t border-[#e7e5e4] bg-[#fafaf9] px-4 py-4">
         <p className="text-xs leading-4 text-[#78716c]">
-          By continuing, you are allowing Setu to use your mobile number to check for existing Account Aggregator profiles to improve your experience
+          By continuing, you allow Onemoney to fetch your bank statement data via Account Aggregator (AA) for evaluating your loan eligibility
         </p>
 
         <Button

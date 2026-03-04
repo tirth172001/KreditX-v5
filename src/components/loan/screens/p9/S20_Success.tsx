@@ -105,8 +105,8 @@ export function S20_Success() {
             {formatINR(loanAmount)} transferred successfully
           </h2>
           <p className="text-sm text-[#78716c] leading-5">
-            We have transferred fund amount in your{" "}
-            {data.repaymentBankAccount || "Canara Bank"} account xx{data.repaymentBankMasked || "8234"}
+            {formatINR(loanAmount)} has been credited to your{" "}
+            {data.repaymentBankAccount || "Canara Bank"} account ending ••••{data.repaymentBankMasked || "8234"}
           </p>
         </div>
 
@@ -143,7 +143,7 @@ export function S20_Success() {
             Get {formatINR(loanAmount)} in your bank account
           </h2>
           <p className="text-sm leading-5 text-[#78716c]">
-            Please provide OTP to transfer the fund in your bank account
+            Enter the OTP sent to your registered number to initiate the transfer
           </p>
         </motion.div>
 
@@ -203,7 +203,7 @@ export function S20_Success() {
             <div>
               <h3 className="text-[18px] font-semibold text-[#1c1917]">Verify transfer</h3>
               <p className="mt-0.5 text-sm text-[#78716c]">
-                OTP sent to number ending xx{mobileLast4}
+                OTP sent to your number ending ••••{mobileLast4}
               </p>
             </div>
             <div className="space-y-3">

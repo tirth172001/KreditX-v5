@@ -259,7 +259,7 @@ export function S12_FaceVerification() {
 
     return (
       <>
-        <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-3 pb-20">
+        <div className="flex flex-col items-center justify-center gap-3 pt-16 pb-28">
           <div className="relative h-[312px] w-[312px] overflow-hidden rounded-full border-2 border-[#e7e5e4] bg-[#f5f5f4]">
             {condition === "camera_error" ? (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[#78716c]">
@@ -313,7 +313,7 @@ export function S12_FaceVerification() {
   if (step === "verifying") {
     return (
       <>
-        <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-2 pb-20">
+        <div className="flex flex-col items-center justify-center gap-2 pt-16 pb-28">
           <div className="relative h-[312px] w-[312px]">
             {/* Rotating arc border */}
             <motion.div
@@ -381,7 +381,7 @@ export function S12_FaceVerification() {
   if (step === "review") {
     return (
       <>
-        <div className="flex min-h-[calc(100dvh-210px)] flex-col items-center justify-center gap-3 pb-20">
+        <div className="flex flex-col items-center justify-center gap-3 pt-16 pb-28">
           <div className="relative h-[312px] w-[312px] overflow-hidden rounded-full bg-[#f5f5f4]">
             {capturedImage ? (
               <img
@@ -426,12 +426,16 @@ export function S12_FaceVerification() {
         initial="hidden"
         animate="show"
       >
+        <motion.div variants={screenItem} className="flex justify-center">
+          <StepProgressBar currentStep={3} />
+        </motion.div>
+
         <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden"><img src="/illustrations/selfie_verification.svg" alt="" className="h-full w-full object-cover" /></motion.div>
 
         <motion.div variants={screenItem} className="space-y-1">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Selfie verification</h2>
           <p className="text-sm leading-5 text-[#78716c]">
-            Please take a clear image of your face to verify your identity and check liveliness
+            Take a clear photo of your face to verify your identity and confirm liveness
           </p>
         </motion.div>
 
@@ -450,9 +454,6 @@ export function S12_FaceVerification() {
       </motion.div>
 
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
-        <div className="flex justify-center mb-3">
-          <StepProgressBar currentStep={3} />
-        </div>
         <Button
           type="button"
           onClick={() => setStep("capture")}

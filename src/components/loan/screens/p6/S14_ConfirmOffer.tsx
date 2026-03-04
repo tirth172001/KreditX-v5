@@ -185,8 +185,6 @@ export function S14_ConfirmOffer() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden"><img src="/illustrations/eligible_lenders.svg" alt="" className="h-full w-full object-cover" /></motion.div>
-
         {/* Lender header — centered */}
         <motion.div variants={screenItem} className="flex flex-col items-center gap-2">
           <div
@@ -331,8 +329,6 @@ export function S14_ConfirmOffer() {
       {/* KFS Bottom Sheet — non-dismissible via backdrop */}
       <BottomSheet open={kfsOpen}>
         <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-white">
-          {/* Step tracker illustration */}
-          <img src="/illustrations/loan_steps.svg" alt="" className="w-full object-cover" />
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#e7e5e4] px-5 py-3">
             <p className="text-sm font-semibold text-[#1c1917]">Terms &amp; conditions</p>

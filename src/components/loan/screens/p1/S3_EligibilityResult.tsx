@@ -38,10 +38,10 @@ function LenderLogo({ logoInitial, color, size = "sm" }: {
 
 const LOAN_STEPS = [
   "Share your bank statement",
-  "Verify your Aadhar",
+  "Verify your Aadhaar",
   "Selfie verification",
   "Select an offer",
-  "Setup autopay",
+  "Set up auto-repayment",
 ];
 
 function StepsBottomSheet({ onCTA }: { onCTA: () => void }) {

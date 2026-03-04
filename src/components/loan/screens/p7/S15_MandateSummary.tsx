@@ -139,13 +139,17 @@ export function S15_MandateSummary() {
         initial="hidden"
         animate="show"
       >
+        <motion.div variants={screenItem} className="flex justify-center">
+          <StepProgressBar currentStep={5} />
+        </motion.div>
+
         {/* Illustration placeholder */}
         <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden"><img src="/illustrations/setup_autopay.svg" alt="" className="h-full w-full object-cover" /></motion.div>
 
         <motion.div variants={screenItem} className="space-y-1">
-          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Setup auto-repayment</h2>
+          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Set up auto-repayment</h2>
           <p className="text-sm leading-5 text-[#78716c]">
-            Please verify your bank account and setup auto repayment facility
+            Link your bank account for automatic EMI deductions — no manual transfers needed
           </p>
         </motion.div>
 
@@ -190,9 +194,6 @@ export function S15_MandateSummary() {
 
       {/* Footer */}
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
-        <div className="flex justify-center mb-3">
-          <StepProgressBar currentStep={5} />
-        </div>
         <button
           type="button"
           onClick={() => setMethodSheetOpen(true)}
@@ -217,7 +218,6 @@ export function S15_MandateSummary() {
       {/* Select autopay method bottom sheet */}
       <BottomSheet open={methodSheetOpen} onClose={() => setMethodSheetOpen(false)}>
         <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-white">
-          <img src="/illustrations/loan_steps.svg" alt="" className="w-full object-cover" />
           <div className="px-6 pt-6 pb-2 border-b border-[#e7e5e4]">
             <h3 className="text-[18px] font-semibold text-[#1c1917]">Select autopay method</h3>
             <p className="mt-0.5 text-sm text-[#78716c]">Choose how you want to authorise mandate</p>

@@ -57,9 +57,9 @@ export function S8_AccountsFound() {
         </motion.div>
 
         <motion.div variants={screenItem} className="space-y-2">
-          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Verify your number xx{mobileLast4}</h2>
+          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Verify your number</h2>
           <p className="text-sm leading-5 text-[#78716c]">
-            Please enter OTP that you have received on number ending with {mobileLast4} from Onemoney to discover linked bank accounts
+            Enter the OTP sent to your number ending ••••{mobileLast4} by Onemoney to link your bank accounts
           </p>
         </motion.div>
 
