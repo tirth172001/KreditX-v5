@@ -3,30 +3,36 @@
 import { useEffect } from "react";
 import { useLoanStore } from "@/store/loanStore";
 
-const BANK_AVATARS = [
-  { initial: "H",  color: "#004C8F" },
-  { initial: "IC", color: "#F58220" },
-  { initial: "B",  color: "#F58220" },
-];
+const BANK_LOGOS: Record<string, string> = {
+  bob:      "/logos/banks/bank-of-baroda.svg",
+  canara:   "/logos/banks/canara-bank.svg",
+  hdfc:     "/logos/banks/hdfc-bank.svg",
+  icici:    "/logos/banks/icici-bank.svg",
+  indusind: "/logos/banks/induslnd-bank.svg",
+};
 
 export function S7_AAOTP() {
-  const { next } = useLoanStore();
+  const { data, next } = useLoanStore();
 
   useEffect(() => {
     const timer = setTimeout(() => next(), 2200);
     return () => clearTimeout(timer);
   }, [next]);
 
+  const selectedBanks = data.selectedBanks.length > 0
+    ? data.selectedBanks
+    : ["canara", "hdfc", "icici"];
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 pt-10">
       <div className="flex items-center">
-        {BANK_AVATARS.map((bank, index) => (
+        {selectedBanks.slice(0, 3).map((bankId, index) => (
           <div
-            key={bank.initial}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-[#d6d3d1] text-[11px] font-bold text-white"
-            style={{ marginLeft: index === 0 ? 0 : -8, backgroundColor: bank.color }}
+            key={bankId}
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-[#d6d3d1] bg-white p-2 overflow-hidden"
+            style={{ marginLeft: index === 0 ? 0 : -8 }}
           >
-            {bank.initial}
+            <img src={BANK_LOGOS[bankId] ?? ""} alt={bankId} className="h-full w-full object-contain" />
           </div>
         ))}
       </div>

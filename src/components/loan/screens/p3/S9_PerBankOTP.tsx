@@ -13,7 +13,7 @@ import { screenContainer, screenItem, listContainer, listItem } from "@/componen
 
 type FlowState = "skeleton" | "discovery" | "final_loading";
 
-type BankId = "canara" | "hdfc" | "icici";
+type BankId = "bob" | "canara" | "hdfc" | "icici" | "indusind";
 
 type BankMeta = {
   id: BankId;
@@ -35,47 +35,63 @@ type LocalAccount = BankAccount & {
   logo: string;
 };
 
-const ONEMONEY_LOGO = "https://www.figma.com/api/mcp/asset/835e1f2c-e71e-48c1-a357-e8487be7efd5";
-
 const BANK_META: Record<BankId, BankMeta> = {
+  bob: {
+    id: "bob",
+    name: "Bank of Baroda",
+    logo: "/logos/banks/bank-of-baroda.svg",
+    logoInitial: "B",
+    color: "#F58220",
+  },
   canara: {
     id: "canara",
-    name: "Canara bank",
-    logo: "https://www.figma.com/api/mcp/asset/b9b84308-0d9a-4a0f-94c2-037fc90c28ca",
+    name: "Canara Bank",
+    logo: "/logos/banks/canara-bank.svg",
     logoInitial: "C",
-    color: "#0ea5e9",
+    color: "#00529B",
   },
   hdfc: {
     id: "hdfc",
-    name: "HDFC bank",
-    logo: "https://www.figma.com/api/mcp/asset/05054687-6aa8-4676-93da-6e53433a0bde",
+    name: "HDFC Bank",
+    logo: "/logos/banks/hdfc-bank.svg",
     logoInitial: "H",
-    color: "#ef4444",
+    color: "#004C8F",
   },
   icici: {
     id: "icici",
     name: "ICICI Bank",
-    logo: "https://www.figma.com/api/mcp/asset/fd2c0422-8233-4b32-9069-5e59add212bd",
+    logo: "/logos/banks/icici-bank.svg",
     logoInitial: "I",
-    color: "#ea580c",
+    color: "#F58220",
+  },
+  indusind: {
+    id: "indusind",
+    name: "IndusInd Bank",
+    logo: "/logos/banks/induslnd-bank.svg",
+    logoInitial: "IB",
+    color: "#2E318B",
   },
 };
 
 const ACCOUNT_TEMPLATES: AccountTemplate[] = [
-  { id: "canara-1", bankId: "canara", accountType: "savings", maskedNumber: "3456" },
-  { id: "canara-2", bankId: "canara", accountType: "current", maskedNumber: "9878" },
-  { id: "canara-3", bankId: "canara", accountType: "current", maskedNumber: "1342" },
-  { id: "hdfc-1", bankId: "hdfc", accountType: "savings", maskedNumber: "8234" },
-  { id: "hdfc-2", bankId: "hdfc", accountType: "savings", maskedNumber: "2345" },
-  { id: "icici-1", bankId: "icici", accountType: "savings", maskedNumber: "8234" },
+  { id: "bob-1",      bankId: "bob",      accountType: "savings", maskedNumber: "5521" },
+  { id: "bob-2",      bankId: "bob",      accountType: "current", maskedNumber: "7743" },
+  { id: "canara-1",   bankId: "canara",   accountType: "savings", maskedNumber: "3456" },
+  { id: "canara-2",   bankId: "canara",   accountType: "current", maskedNumber: "9878" },
+  { id: "hdfc-1",     bankId: "hdfc",     accountType: "savings", maskedNumber: "8234" },
+  { id: "hdfc-2",     bankId: "hdfc",     accountType: "savings", maskedNumber: "2345" },
+  { id: "icici-1",    bankId: "icici",    accountType: "savings", maskedNumber: "8234" },
+  { id: "indusind-1", bankId: "indusind", accountType: "savings", maskedNumber: "6612" },
 ];
 
-const BANK_ORDER: BankId[] = ["canara", "hdfc", "icici"];
+const BANK_ORDER: BankId[] = ["bob", "canara", "hdfc", "icici", "indusind"];
 
 function inferBankId(bankName: string): BankId {
   const value = bankName.toLowerCase();
   if (value.includes("hdfc")) return "hdfc";
   if (value.includes("icici")) return "icici";
+  if (value.includes("baroda") || value === "bob") return "bob";
+  if (value.includes("indus")) return "indusind";
   return "canara";
 }
 
@@ -137,14 +153,10 @@ function toStoreAccount(account: LocalAccount): BankAccount {
 function AccountLogo({ account, size = 32 }: { account: LocalAccount; size?: number }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#d6d3d1] bg-white"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#d6d3d1] bg-white p-1.5"
       style={{ width: size, height: size }}
     >
-      <img
-        src={account.logo}
-        alt=""
-        className={cn("object-contain", size >= 48 ? "h-8 w-8" : "h-6 w-6")}
-      />
+      <img src={account.logo} alt={account.bankName} className="h-full w-full object-contain" />
     </div>
   );
 }
@@ -228,8 +240,9 @@ export function S9_PerBankOTP() {
     setOtpSheetOpen(true);
   };
 
-  const verifyCurrentBank = async () => {
-    if (!currentGroup || otp.length !== 6) return;
+  const verifyCurrentBank = async (val?: string) => {
+    const code = val ?? otp;
+    if (!currentGroup || code.length !== 6) return;
     setIsVerifying(true);
     await new Promise((resolve) => setTimeout(resolve, 1100));
     setIsVerifying(false);
@@ -265,7 +278,9 @@ export function S9_PerBankOTP() {
     return (
       <>
         <div className="flex flex-col gap-6 pb-44">
-          <div className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+          <div className="h-[108px] w-full rounded-lg overflow-hidden">
+            <img src="/illustrations/accounts_found.svg" alt="" className="h-full w-full object-cover" />
+          </div>
 
           <div className="space-y-2">
             <div className="h-5 w-[208px] rounded bg-[#d6d3d1]" />
@@ -299,7 +314,7 @@ export function S9_PerBankOTP() {
 
           <div className="mt-3 flex items-center justify-center gap-2 text-xs text-[#84878a]">
             <span>Powered by RBI regulated AA</span>
-            <img src={ONEMONEY_LOGO} alt="Onemoney" className="h-5 w-[68px] object-contain" />
+            <span className="font-semibold text-[#003323]">OneMoney</span>
           </div>
         </div>
       </>
@@ -341,7 +356,9 @@ export function S9_PerBankOTP() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
+          <img src="/illustrations/accounts_found.svg" alt="" className="h-full w-full object-cover" />
+        </motion.div>
 
         <motion.div variants={screenItem} className="space-y-2">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
@@ -407,7 +424,7 @@ export function S9_PerBankOTP() {
 
         <div className="mt-3 flex items-center justify-center gap-2 text-xs text-[#84878a]">
           <span>Powered by RBI regulated AA</span>
-          <img src={ONEMONEY_LOGO} alt="Onemoney" className="h-5 w-[68px] object-contain" />
+          <span className="font-semibold text-[#003323]">OneMoney</span>
         </div>
       </div>
 
@@ -471,7 +488,7 @@ export function S9_PerBankOTP() {
 
                 <Button
                   type="button"
-                  onClick={verifyCurrentBank}
+                  onClick={() => verifyCurrentBank()}
                   disabled={otp.length !== 6 || isVerifying}
                   className="h-10 w-full text-sm font-medium"
                 >

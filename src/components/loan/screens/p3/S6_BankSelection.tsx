@@ -11,16 +11,15 @@ import { screenContainer, screenItem, listContainer, listItem } from "@/componen
 type BankOption = {
   id: string;
   name: string;
-  initial: string;
-  color: string;
+  logo: string;
 };
 
 const BANKS: BankOption[] = [
-  { id: "bob",      name: "Bank of Baroda", initial: "B",  color: "#F58220" },
-  { id: "canara",   name: "Canara Bank",    initial: "CB", color: "#00529B" },
-  { id: "hdfc",     name: "HDFC Bank",      initial: "H",  color: "#004C8F" },
-  { id: "icici",    name: "ICICI Bank",     initial: "IC", color: "#F58220" },
-  { id: "indusind", name: "IndusInd Bank",  initial: "IB", color: "#2E318B" },
+  { id: "bob",      name: "Bank of Baroda", logo: "/logos/banks/bank-of-baroda.svg" },
+  { id: "canara",   name: "Canara Bank",    logo: "/logos/banks/canara-bank.svg" },
+  { id: "hdfc",     name: "HDFC Bank",      logo: "/logos/banks/hdfc-bank.svg" },
+  { id: "icici",    name: "ICICI Bank",     logo: "/logos/banks/icici-bank.svg" },
+  { id: "indusind", name: "IndusInd Bank",  logo: "/logos/banks/induslnd-bank.svg" },
 ];
 
 export function S6_BankSelection() {
@@ -50,7 +49,9 @@ export function S6_BankSelection() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
+          <img src="/illustrations/bank_statement.svg" alt="" className="h-full w-full object-cover" />
+        </motion.div>
 
         <motion.div variants={screenItem} className="space-y-2">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
@@ -76,11 +77,8 @@ export function S6_BankSelection() {
                   className="flex w-full items-center gap-2 rounded-lg bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
                   whileTap={{ scale: 0.985 }}
                 >
-                  <div
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                    style={{ backgroundColor: bank.color }}
-                  >
-                    {bank.initial}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e7e5e4] bg-white overflow-hidden p-1">
+                    <img src={bank.logo} alt={bank.name} className="h-full w-full object-contain" />
                   </div>
 
                   <p className="flex-1 text-sm text-[#1c1917]">{bank.name}</p>

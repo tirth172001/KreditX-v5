@@ -99,14 +99,8 @@ function SectionGroup({ label, children }: { label: string; children: React.Reac
 
 function Illustration() {
   return (
-    <div className="w-full h-[108px] rounded-lg bg-[#f5f5f4] flex items-center justify-center overflow-hidden shrink-0">
-      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="opacity-20">
-        <rect x="8" y="12" width="64" height="44" rx="4" stroke="#003323" strokeWidth="2"/>
-        <rect x="16" y="20" width="22" height="28" rx="2" fill="#003323"/>
-        <rect x="44" y="20" width="20" height="8" rx="2" fill="#003323" fillOpacity="0.4"/>
-        <rect x="44" y="32" width="20" height="8" rx="2" fill="#003323" fillOpacity="0.4"/>
-        <rect x="44" y="44" width="12" height="4" rx="2" fill="#003323" fillOpacity="0.3"/>
-      </svg>
+    <div className="w-full h-[108px] rounded-lg overflow-hidden shrink-0">
+      <img src="/illustrations/check_eligibility.svg" alt="" className="h-full w-full object-cover" />
     </div>
   );
 }
@@ -171,16 +165,16 @@ export function S1_ConfirmDetails() {
       {/* Personal details */}
       <SectionGroup label="Personal details">
         <Field label="First name (as per PAN)" error={errors.firstName?.message}>
-          <TextInput placeholder="Tirth" {...register("firstName")} />
+          <TextInput placeholder="Enter your first name" {...register("firstName")} />
         </Field>
 
         <Field label="Last name (as per PAN)" error={errors.lastName?.message}>
-          <TextInput placeholder="Trivedi" {...register("lastName")} />
+          <TextInput placeholder="Enter your last name" {...register("lastName")} />
         </Field>
 
         <Field label="PAN" error={errors.panNumber?.message}>
           <TextInput
-            placeholder="ABCDE1234F"
+            placeholder="Enter your PAN number"
             maxLength={10}
             autoCapitalize="characters"
             className="font-mono tracking-widest uppercase"
@@ -189,42 +183,42 @@ export function S1_ConfirmDetails() {
         </Field>
 
         <Field label="Phone number" error={errors.mobile?.message}>
-          <TextInput placeholder="98989 98989" inputMode="numeric" maxLength={10} {...register("mobile")} />
+          <TextInput placeholder="Enter your mobile number" inputMode="numeric" maxLength={10} {...register("mobile")} />
         </Field>
 
         <Field label="Email" error={errors.email?.message}>
-          <TextInput placeholder="yourname@gmail.com" type="email" inputMode="email" {...register("email")} />
+          <TextInput placeholder="Enter your email address" type="email" inputMode="email" {...register("email")} />
         </Field>
       </SectionGroup>
 
       {/* Current address details */}
       <SectionGroup label="Current address details">
         <Field label="Address line 1" error={errors.address1?.message}>
-          <TextInput placeholder="C1002, SP nirvana, Ghuma extension" {...register("address1")} />
+          <TextInput placeholder="Enter your street address" {...register("address1")} />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="City" error={errors.city?.message}>
-            <TextInput placeholder="Ahmedabad" {...register("city")} />
+            <TextInput placeholder="Enter your city" {...register("city")} />
           </Field>
           <Field label="State" error={errors.state?.message}>
-            <TextInput placeholder="Gujarat" {...register("state")} />
+            <TextInput placeholder="Enter your state" {...register("state")} />
           </Field>
         </div>
 
         <Field label="Pincode" error={errors.pincode?.message}>
-          <TextInput placeholder="380058" inputMode="numeric" maxLength={6} {...register("pincode")} />
+          <TextInput placeholder="Enter 6-digit pincode" inputMode="numeric" maxLength={6} {...register("pincode")} />
         </Field>
       </SectionGroup>
 
       {/* Other details */}
       <SectionGroup label="Other details">
         <Field label="Self declared salary (INR)" error={errors.monthlyIncome?.message}>
-          <TextInput placeholder="1,00,000" inputMode="numeric" {...register("monthlyIncome")} />
+          <TextInput placeholder="Enter your monthly salary" inputMode="numeric" {...register("monthlyIncome")} />
         </Field>
 
         <Field label="Company name" error={errors.companyName?.message}>
-          <TextInput placeholder="Setu" {...register("companyName")} />
+          <TextInput placeholder="Enter your company name" {...register("companyName")} />
         </Field>
 
         <Field label="Gender" error={errors.gender?.message}>

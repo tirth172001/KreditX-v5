@@ -7,7 +7,7 @@ interface OTPInputProps {
   length?: number;
   value: string;
   onChange: (val: string) => void;
-  onComplete?: () => void;
+  onComplete?: (val: string) => void;
   className?: string;
   fullWidth?: boolean;
 }
@@ -22,7 +22,7 @@ export function OTPInput({ length = 6, value, onChange, onComplete, className, f
     const next = digits.map((d, idx) => (idx === i ? char : d)).join("").slice(0, length);
     onChange(next);
     if (char && i < length - 1) refs.current[i + 1]?.focus();
-    if (next.length === length) onComplete?.();
+    if (next.length === length) onComplete?.(next);
   };
 
   const handleKeyDown = (i: number, e: KeyboardEvent<HTMLInputElement>) => {
@@ -36,6 +36,7 @@ export function OTPInput({ length = 6, value, onChange, onComplete, className, f
     if (pasted) {
       onChange(pasted);
       refs.current[Math.min(pasted.length, length - 1)]?.focus();
+      if (pasted.length === length) onComplete?.(pasted);
     }
     e.preventDefault();
   };

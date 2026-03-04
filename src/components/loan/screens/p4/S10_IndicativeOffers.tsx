@@ -25,7 +25,9 @@ export function S10_IndicativeOffers() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
+          <img src="/illustrations/eligible_lenders.svg" alt="" className="h-full w-full object-cover" />
+        </motion.div>
 
         <motion.div variants={screenItem} className="space-y-1">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Your loan offers</h2>

@@ -17,7 +17,9 @@ export function S5_AAIntro() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
+          <img src="/illustrations/login.svg" alt="" className="h-full w-full object-cover" />
+        </motion.div>
 
         <motion.div variants={screenItem} className="space-y-1">
           <h2 className="text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-[#1c1917]">

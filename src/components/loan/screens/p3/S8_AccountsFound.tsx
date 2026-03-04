@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button";
 import { OTPInput } from "@/components/loan/shared/OTPInput";
 import { screenContainer, screenItem } from "@/components/loan/shared/motion";
 
-const BANK_AVATARS: Record<string, { initial: string; color: string }> = {
-  canara:  { initial: "CB", color: "#00529B" },
-  hdfc:    { initial: "H",  color: "#004C8F" },
-  icici:   { initial: "IC", color: "#F58220" },
+const BANK_LOGOS: Record<string, string> = {
+  bob:      "/logos/banks/bank-of-baroda.svg",
+  canara:   "/logos/banks/canara-bank.svg",
+  hdfc:     "/logos/banks/hdfc-bank.svg",
+  icici:    "/logos/banks/icici-bank.svg",
+  indusind: "/logos/banks/induslnd-bank.svg",
 };
 
 export function S8_AccountsFound() {
@@ -23,13 +25,11 @@ export function S8_AccountsFound() {
 
   const mobileLast4 = (data.mobile || "").slice(-4) || "9747";
   const selectedBanks = data.selectedBanks.length > 0 ? data.selectedBanks : ["canara", "hdfc", "icici"];
-  const avatarsToShow = selectedBanks
-    .map((id) => BANK_AVATARS[id])
-    .filter(Boolean)
-    .slice(0, 3);
+  const avatarsToShow = selectedBanks.slice(0, 3);
 
-  const handleVerify = async () => {
-    if (otp.length !== 6) return;
+  const handleVerify = async (val?: string) => {
+    const code = val ?? otp;
+    if (code.length !== 6) return;
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 1200));
     toast.success("OTP verified successfully");
@@ -52,7 +52,9 @@ export function S8_AccountsFound() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
+          <img src="/illustrations/accounts_found.svg" alt="" className="h-full w-full object-cover" />
+        </motion.div>
 
         <motion.div variants={screenItem} className="space-y-2">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">Verify your number xx{mobileLast4}</h2>
@@ -65,13 +67,13 @@ export function S8_AccountsFound() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex items-center">
-                {avatarsToShow.map((avatar, index) => (
+                {avatarsToShow.map((bankId, index) => (
                   <div
-                    key={index}
-                    className="flex h-4 w-4 items-center justify-center rounded-full border border-[#d6d3d1] text-[6px] font-bold text-white"
-                    style={{ marginLeft: index === 0 ? 0 : -3, backgroundColor: avatar.color }}
+                    key={bankId}
+                    className="flex h-5 w-5 items-center justify-center rounded-full border border-[#d6d3d1] bg-white overflow-hidden p-0.5"
+                    style={{ marginLeft: index === 0 ? 0 : -4 }}
                   >
-                    {avatar.initial}
+                    <img src={BANK_LOGOS[bankId] ?? ""} alt={bankId} className="h-full w-full object-contain" />
                   </div>
                 ))}
               </div>
@@ -107,7 +109,7 @@ export function S8_AccountsFound() {
 
         <Button
           type="button"
-          onClick={handleVerify}
+          onClick={() => handleVerify()}
           disabled={otp.length !== 6 || isLoading}
           className="mt-3 h-10 w-full text-sm font-semibold"
         >

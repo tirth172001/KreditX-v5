@@ -31,8 +31,9 @@ export function S20_Success() {
   const finalEMI = data.finalEMI || 0;
   const selectedTenure = data.selectedTenure || 9;
 
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) return;
+  const handleVerifyOtp = async (val?: string) => {
+    const code = val ?? otp;
+    if (code.length !== 6) return;
     setIsVerifying(true);
     await new Promise((r) => setTimeout(r, 1200));
     toast.success("Transfer initiated successfully");
@@ -133,7 +134,9 @@ export function S20_Success() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg bg-[#f5f5f4]" />
+        <motion.div variants={screenItem} className="h-[108px] w-full rounded-lg overflow-hidden">
+          <img src="/illustrations/get_money.svg" alt="" className="h-full w-full object-cover" />
+        </motion.div>
 
         <motion.div variants={screenItem} className="space-y-1">
           <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
@@ -209,7 +212,7 @@ export function S20_Success() {
             </div>
             <button
               type="button"
-              onClick={handleVerifyOtp}
+              onClick={() => handleVerifyOtp()}
               disabled={otp.length !== 6 || isVerifying}
               className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium disabled:opacity-60"
             >
