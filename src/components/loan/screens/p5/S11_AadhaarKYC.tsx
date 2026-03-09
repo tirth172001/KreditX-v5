@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { CheckCircle2, FileCheck2 } from "lucide-react";
 import { StepProgressBar } from "@/components/loan/shared/StepProgressBar";
-import { useLoanStore, SCREENS } from "@/store/loanStore";
+import { useLoanStore, SCREENS, type LenderOffer } from "@/store/loanStore";
 import { screenContainer, screenItem, listContainer, listItem } from "@/components/loan/shared/motion";
 import { cn } from "@/lib/utils";
 
@@ -136,6 +136,23 @@ function GreenButton({ children, onClick, disabled }: { children: React.ReactNod
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+function SelectedLenderRow({ lenderId, lenders }: { lenderId: string; lenders: LenderOffer[] }) {
+  const lender = lenders.find((l) => l.id === lenderId);
+  if (!lender) return null;
+  return (
+    <div className="flex items-center justify-center gap-2 py-2.5">
+      <span className="text-xs text-[#78716c]">Proceeding with</span>
+      <div
+        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[6px] font-bold text-white"
+        style={{ backgroundColor: lender.color }}
+      >
+        {lender.logoInitial}
+      </div>
+      <span className="text-xs font-semibold text-[#1c1917]">{lender.name}</span>
+    </div>
+  );
+}
+
 export function S11_AadhaarKYC() {
   const { data, update, goTo } = useLoanStore();
   const [step, setStep] = useState<DigiStep>("intro");
@@ -157,7 +174,7 @@ export function S11_AadhaarKYC() {
           initial="hidden"
           animate="show"
         >
-          <motion.div variants={screenItem} className="flex justify-center">
+          <motion.div variants={screenItem}>
             <StepProgressBar currentStep={2} />
           </motion.div>
 
@@ -187,17 +204,24 @@ export function S11_AadhaarKYC() {
         </motion.div>
 
         {/* Footer */}
-        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white px-4 pb-4 pt-3 border-t border-[#e7e5e4]">
-          <button
-            type="button"
-            onClick={() => setStep("digilocker_entry")}
-            className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium"
-          >
-            Verify Aadhaar
-          </button>
-          <div className="mt-2 flex items-center justify-center gap-1.5">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#78716c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
+        <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-[390px] -translate-x-1/2 bg-white border-t border-[#e7e5e4]">
+          {data.selectedLenderId && (
+            <div className="border-b border-[#f5f5f4]">
+              <SelectedLenderRow lenderId={data.selectedLenderId} lenders={data.eligibleLenders} />
+            </div>
+          )}
+          <div className="px-4 pb-4 pt-3">
+            <button
+              type="button"
+              onClick={() => setStep("digilocker_entry")}
+              className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium"
+            >
+              Verify Aadhaar
+            </button>
+            <div className="mt-2 flex items-center justify-center gap-1.5">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#78716c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
+            </div>
           </div>
         </div>
       </>

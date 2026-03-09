@@ -24,6 +24,8 @@ export interface LenderOffer {
   ineligibleReason?: string;
   isSelected: boolean;
   maxAmount?: number;
+  minTenure?: number;
+  maxTenure?: number;
 }
 
 export interface FinalOffer {
@@ -85,6 +87,9 @@ export interface LoanData {
   aadhaarVerified: boolean;
   faceVerified: boolean;
 
+  // Lender chosen at tentative offer step
+  selectedLenderId: string;
+
   // Final Offer Selection
   finalOffers: FinalOffer[];
   selectedOfferId: string;
@@ -144,11 +149,11 @@ const MOCK_MERCHANT: MerchantContext = {
 };
 
 const MOCK_LENDERS: LenderOffer[] = [
-  { id: "ab", name: "Aditya Birla Capital", logoInitial: "AB", color: "#E03B2C", minRate: 11.5, maxRate: 11.5, processingFee: 900, isEligible: true, isSelected: true, maxAmount: 400000 },
-  { id: "axis", name: "Axis Bank", logoInitial: "A", color: "#800020", minRate: 11.5, maxRate: 13, processingFee: 1199, isEligible: true, isSelected: true, maxAmount: 400000 },
-  { id: "canara", name: "Canara Bank", logoInitial: "CB", color: "#0ea5e9", minRate: 11.5, maxRate: 13, processingFee: 999, isEligible: true, isSelected: true, maxAmount: 300000 },
-  { id: "hdfc", name: "HDFC Bank", logoInitial: "H", color: "#004C8F", minRate: 11.5, maxRate: 13, processingFee: 999, isEligible: true, isSelected: true, maxAmount: 300000 },
-  { id: "idfc", name: "IDFC Bank", logoInitial: "IF", color: "#B91C1C", minRate: 11.5, maxRate: 13, processingFee: 799, isEligible: true, isSelected: true, maxAmount: 300000 },
+  { id: "ab", name: "Aditya Birla Capital", logoInitial: "AB", color: "#E03B2C", minRate: 11.5, maxRate: 11.5, processingFee: 900, isEligible: true, isSelected: false, maxAmount: 400000, minTenure: 12, maxTenure: 36 },
+  { id: "axis", name: "Axis Bank", logoInitial: "A", color: "#800020", minRate: 11.5, maxRate: 13, processingFee: 1199, isEligible: true, isSelected: false, maxAmount: 400000, minTenure: 12, maxTenure: 48 },
+  { id: "canara", name: "Canara Bank", logoInitial: "CB", color: "#0ea5e9", minRate: 11.5, maxRate: 13, processingFee: 999, isEligible: true, isSelected: false, maxAmount: 300000, minTenure: 12, maxTenure: 36 },
+  { id: "hdfc", name: "HDFC Bank", logoInitial: "H", color: "#004C8F", minRate: 11.5, maxRate: 13, processingFee: 999, isEligible: true, isSelected: false, maxAmount: 300000, minTenure: 12, maxTenure: 48 },
+  { id: "idfc", name: "IDFC Bank", logoInitial: "IF", color: "#B91C1C", minRate: 11.5, maxRate: 13, processingFee: 799, isEligible: true, isSelected: false, maxAmount: 300000, minTenure: 6, maxTenure: 24 },
   { id: "sbi", name: "SBI", logoInitial: "SB", color: "#21409A", minRate: 11.0, maxRate: 14.0, processingFee: 0, isEligible: false, ineligibleReason: "Requires 750+ CIBIL", isSelected: false },
   { id: "icici", name: "ICICI Bank", logoInitial: "IC", color: "#F58220", minRate: 11.5, maxRate: 13.0, processingFee: 1099, isEligible: false, ineligibleReason: "Minimum income ₹35,000", isSelected: false },
 ];
@@ -189,6 +194,7 @@ const defaultData: LoanData = {
   loanPurpose: "",
   eligibleLenders: MOCK_LENDERS,
   creditScore: 742,
+  selectedLenderId: "",
   selectedBanks: [],
   discoveredAccounts: MOCK_ACCOUNTS,
   aadhaarNumber: "",
@@ -240,6 +246,6 @@ export const useLoanStore = create<LoanStore>()(
       reset: () => set({ currentScreen: 1, data: defaultData }),
       setMerchantStripMode: (mode) => set({ merchantStripMode: mode }),
     }),
-    { name: "loan-journey-v9" }
+    { name: "loan-journey-v11" }
   )
 );

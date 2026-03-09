@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { Check } from "lucide-react";
 import { BottomSheet } from "@/components/loan/shared/BottomSheet";
 
 const STEPS = [
@@ -18,23 +18,32 @@ interface StepProgressBarProps {
 
 export function StepProgressBar({ currentStep }: StepProgressBarProps) {
   const [open, setOpen] = useState(false);
-  const doneCount = currentStep - 1;
+  const currentLabel = STEPS[currentStep - 1];
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-full bg-[#1c1917] px-4 py-2 text-white"
+        className="w-full text-left"
       >
-        <span className="text-sm font-medium">Step {currentStep}/5</span>
-        <div className="h-[2px] w-16 rounded-full bg-white/30">
-          <div
-            className="h-[2px] rounded-full bg-white"
-            style={{ width: `${(doneCount / 4) * 100}%` }}
-          />
+        {/* Label row */}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-medium text-[#1c1917]">{currentLabel}</p>
+          <span className="text-xs text-[#a8a29e]">{currentStep} of 5</span>
         </div>
-        <ChevronRight className="h-4 w-4 text-white/70" />
+
+        {/* Thin progress bar */}
+        <div className="flex gap-0.5">
+          {STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-0.5 flex-1 rounded-full transition-all duration-500 ${
+                i + 1 <= currentStep ? "bg-[#003323]" : "bg-[#e7e5e4]"
+              }`}
+            />
+          ))}
+        </div>
       </button>
 
       <BottomSheet open={open} onClose={() => setOpen(false)}>

@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, ChevronRight, Shield, X } from "lucide-react";
-import { useLoanStore, SCREENS } from "@/store/loanStore";
-import { cn } from "@/lib/utils";
+import { ChevronRight, Shield, X } from "lucide-react";
+import { useLoanStore, SCREENS, type LenderOffer } from "@/store/loanStore";
 import { listContainer, listItem } from "@/components/loan/shared/motion";
 import { BottomSheet } from "@/components/loan/shared/BottomSheet";
 
-// ─── Lender logo — 24×24 white circle with colored initial ────────────────────
+// ─── Lender logo ──────────────────────────────────────────────────────────────
 
 function LenderLogo({ logoInitial, color, size = "sm" }: {
   logoInitial: string;
@@ -30,56 +29,6 @@ function LenderLogo({ logoInitial, color, size = "sm" }: {
       <span className="text-[7px] font-bold leading-none" style={{ color }}>
         {logoInitial}
       </span>
-    </div>
-  );
-}
-
-// ─── Steps Bottom Sheet ───────────────────────────────────────────────────────
-
-const LOAN_STEPS = [
-  "Share your bank statement",
-  "Verify your Aadhaar",
-  "Selfie verification",
-  "Select an offer",
-  "Set up auto-repayment",
-];
-
-function StepsBottomSheet({ onCTA }: { onCTA: () => void }) {
-  return (
-    <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-white">
-      <div className="overflow-hidden">
-        <img src="/illustrations/loan_steps.svg" alt="" className="w-full object-cover" />
-      </div>
-
-      <div className="px-6 pb-6">
-        <h3 className="mt-5 text-[18px] leading-7 font-semibold text-[#1c1917]">
-          Steps to get a loan
-        </h3>
-        <div className="mt-4 space-y-3">
-          {LOAN_STEPS.map((label, index) => (
-            <div key={label} className="flex items-center gap-3">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#d6d3d1] text-xs font-semibold text-[#78716c]">
-                {index + 1}
-              </div>
-              <p className="text-sm text-[#1c1917]">{label}</p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-5 text-xs leading-5 text-[#78716c]">
-          By continuing, you agree to share your details with all selected lenders to analyse your details and generate an offer
-        </p>
-        <button
-          type="button"
-          onClick={onCTA}
-          className="mt-5 w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-medium"
-        >
-          Share bank statement
-        </button>
-        <div className="mt-3 flex items-center justify-center gap-1.5">
-          <Shield className="h-3.5 w-3.5 text-[#78716c]" strokeWidth={1.5} />
-          <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
-        </div>
-      </div>
     </div>
   );
 }
@@ -114,39 +63,134 @@ function ExcludedLendersSheet({ lenders }: {
   );
 }
 
+// ─── Bank Statement Decision Sheet ───────────────────────────────────────────
+
+function BankStatementDecisionSheet({
+  lender,
+  onShareBankStatement,
+  onSkip,
+}: {
+  lender: LenderOffer;
+  onShareBankStatement: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div className="w-full max-w-[390px] overflow-hidden rounded-t-2xl bg-white">
+      {/* Handle */}
+      <div className="flex justify-center pt-3 pb-1">
+        <div className="h-1 w-10 rounded-full bg-[#d6d3d1]" />
+      </div>
+
+      <div className="px-5 pb-6 pt-3 space-y-5">
+        {/* Heading */}
+        <div className="space-y-1">
+          <h3 className="text-[18px] font-semibold leading-7 text-[#1c1917]">
+            Your tentative offer
+          </h3>
+          <p className="text-xs text-[#78716c]">Based on your credit profile</p>
+        </div>
+
+        {/* Offer card — same design as lender list */}
+        <div className="overflow-hidden rounded-xl border border-[#e7e5e4] bg-white">
+          {/* Identity row */}
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{ backgroundColor: lender.color }}
+            >
+              {lender.logoInitial}
+            </div>
+            <p className="flex-1 text-sm font-semibold text-[#1c1917]">{lender.name}</p>
+          </div>
+
+          {/* Stat bar */}
+          <div className="grid grid-cols-3 divide-x divide-[#f0f0ef] border-t border-[#f0f0ef]">
+            <div className="flex flex-col pl-4 py-2.5 gap-0.5">
+              <p className="text-xs font-semibold text-[#1c1917]">
+                ₹{((lender.maxAmount ?? 0) / 100000).toFixed(0)}L
+              </p>
+              <p className="text-[10px] text-[#a8a29e]">Max amount</p>
+            </div>
+            <div className="flex flex-col pl-4 py-2.5 gap-0.5">
+              <p className="text-xs font-semibold text-[#1c1917]">
+                {lender.minRate === lender.maxRate
+                  ? `${lender.minRate}%`
+                  : `${lender.minRate}–${lender.maxRate}%`}
+              </p>
+              <p className="text-[10px] text-[#a8a29e]">Rate p.a.</p>
+            </div>
+            <div className="flex flex-col pl-4 py-2.5 gap-0.5">
+              <p className="text-xs font-semibold text-[#1c1917]">
+                {lender.minTenure}–{lender.maxTenure}m
+              </p>
+              <p className="text-[10px] text-[#a8a29e]">Tenure</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Banner */}
+        <div className="overflow-hidden rounded-xl bg-[#003323] relative">
+          {/* Decorative circle */}
+          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/[0.04]" />
+          <div className="pointer-events-none absolute -right-2 -bottom-6 h-20 w-20 rounded-full bg-white/[0.04]" />
+
+          <div className="relative px-4 py-5 space-y-4">
+            <div className="space-y-1">
+              <p className="text-base font-bold text-white">Get a better offer</p>
+              <p className="text-xs text-white/55 leading-5">
+                Share your bank statement and let lenders see your full financial picture for higher limits and lower rates.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onShareBankStatement}
+              className="w-full h-10 rounded-lg bg-white text-[#003323] text-sm font-semibold"
+            >
+              Share bank statement
+            </button>
+
+            <div className="flex items-center justify-center gap-1.5">
+              <Shield className="h-3 w-3 text-white/35" strokeWidth={1.5} />
+              <span className="text-[10px] text-white/35">100% secure as per RBI</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Skip */}
+        <button
+          type="button"
+          onClick={onSkip}
+          className="w-full py-1 text-center text-sm font-medium text-[#003323]"
+        >
+          Skip for now
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function S3_EligibilityResult() {
   const { data, update, goTo } = useLoanStore();
-  const [stepsOpen, setStepsOpen] = useState(false);
+  const [pendingLenderId, setPendingLenderId] = useState<string>("");
+  const [decisionSheetOpen, setDecisionSheetOpen] = useState(false);
   const [excludedSheetOpen, setExcludedSheetOpen] = useState(false);
 
   const eligible = data.eligibleLenders.filter((l) => l.isEligible);
   const ineligible = data.eligibleLenders.filter((l) => !l.isEligible);
 
-  const [localSelected, setLocalSelected] = useState<string[]>(
-    data.eligibleLenders.filter((l) => l.isSelected).map((l) => l.id)
-  );
+  const pendingLender = eligible.find((l) => l.id === pendingLenderId);
 
-  const toggleLender = (id: string) => {
-    setLocalSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleGenerateOffer = () => {
-    update({
-      eligibleLenders: data.eligibleLenders.map((l) => ({
-        ...l,
-        isSelected: localSelected.includes(l.id),
-      })),
-    });
-    setStepsOpen(true);
+  const handleCardTap = (lenderId: string) => {
+    setPendingLenderId(lenderId);
+    setDecisionSheetOpen(true);
   };
 
   return (
     <>
-      <div className="flex flex-col gap-6 pb-36">
+      <div className="flex flex-col gap-6 pb-10">
         {/* Illustration */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -157,121 +201,111 @@ export function S3_EligibilityResult() {
           <img src="/illustrations/eligible_lenders.svg" alt="" className="h-full w-full object-cover" />
         </motion.div>
 
-        {/* Heading + excluded row — tighter 16px gap between them */}
+        {/* Heading */}
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.2 }}
-          className="flex flex-col gap-4"
+          className="space-y-1"
         >
-          <div className="space-y-1">
-            <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
-              Yay! you are eligible for {eligible.length} lenders
-            </h2>
-            <p className="text-sm leading-5 text-[#78716c]">
-              You are eligible for loans from below lenders, select from whom do you want to get an offer
-            </p>
-          </div>
-
-          {/* Excluded lenders pill row */}
-          {ineligible.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setExcludedSheetOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-white p-2 shadow-[0_1px_1px_rgba(0,0,0,0.02),0_1px_2px_rgba(0,0,0,0.04)]"
-            >
-              {/* Overlapping logo circles */}
-              <div className="flex items-center shrink-0">
-                {ineligible.slice(0, 3).map((l, idx) => (
-                  <div
-                    key={l.id}
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white border border-[#d6d3d1] overflow-hidden p-0.5"
-                    style={{ marginLeft: idx === 0 ? 0 : -8 }}
-                  >
-                    <span className="text-[6px] font-bold leading-none" style={{ color: l.color }}>
-                      {l.logoInitial}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="flex-1 text-xs font-medium text-[#1c1917] text-left">
-                {ineligible.length} Lenders excluded
-              </p>
-              {/* Chevron right — using -rotate-90 on chevron-down matches Figma */}
-              <ChevronRight className="h-5 w-5 shrink-0 text-[#78716c]" />
-            </button>
-          )}
+          <h2 className="text-[18px] leading-7 font-semibold text-[#1c1917]">
+            Yay! you are eligible for {eligible.length} lenders
+          </h2>
+          <p className="text-sm leading-5 text-[#78716c]">
+            Tap a lender to see your tentative offer and proceed
+          </p>
         </motion.div>
 
-        {/* Eligible lenders list — 8px gap between rows */}
+        {/* Eligible lenders — tentative offer cards */}
         <motion.div
           variants={listContainer}
           initial="hidden"
           animate="show"
           className="flex flex-col gap-2"
         >
-          {eligible.map((lender) => {
-            const isChecked = localSelected.includes(lender.id);
-            return (
-              <motion.button
-                key={lender.id}
-                variants={listItem}
-                type="button"
-                onClick={() => toggleLender(lender.id)}
-                className="flex w-full items-start gap-3 rounded-lg bg-white p-3 text-left shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
-              >
-                <LenderLogo logoInitial={lender.logoInitial} color={lender.color} />
-
-                <div className={cn("flex-1 min-w-0", lender.maxAmount ? "flex flex-col gap-1" : "flex items-center")}>
-                  <p className="text-sm font-semibold leading-5 text-[#1c1917]">{lender.name}</p>
-                  {lender.maxAmount && (
-                    <p className="text-xs leading-4 text-[#78716c]">
-                      Upto ₹{lender.maxAmount.toLocaleString("en-IN")}
-                    </p>
-                  )}
-                </div>
-
-                {/* Checkbox — 16×16, rounded-[4px], solid green when checked */}
+          {eligible.map((lender) => (
+            <motion.button
+              key={lender.id}
+              variants={listItem}
+              type="button"
+              onClick={() => handleCardTap(lender.id)}
+              whileTap={{ scale: 0.985 }}
+              className="w-full overflow-hidden rounded-xl bg-white text-left shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+            >
+              {/* Identity row */}
+              <div className="flex items-center gap-3 px-4 py-3.5">
                 <div
-                  className={cn(
-                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors mt-0.5",
-                    isChecked
-                      ? "border-[#003323] bg-[#003323]"
-                      : "border-[#d6d3d1] bg-white"
-                  )}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                  style={{ backgroundColor: lender.color }}
                 >
-                  {isChecked && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                  {lender.logoInitial}
                 </div>
-              </motion.button>
-            );
-          })}
+                <p className="flex-1 text-sm font-semibold text-[#1c1917]">{lender.name}</p>
+                <ChevronRight className="h-4 w-4 shrink-0 text-[#a8a29e]" />
+              </div>
+
+              {/* Stat bar */}
+              <div className="grid grid-cols-3 divide-x divide-[#f0f0ef] border-t border-[#f0f0ef]">
+                <div className="flex flex-col pl-4 py-2.5 gap-0.5">
+                  <p className="text-xs font-semibold text-[#1c1917]">
+                    ₹{lender.maxAmount ? (lender.maxAmount / 100000).toFixed(0) + "L" : "—"}
+                  </p>
+                  <p className="text-[10px] text-[#a8a29e]">Max amount</p>
+                </div>
+                <div className="flex flex-col pl-4 py-2.5 gap-0.5">
+                  <p className="text-xs font-semibold text-[#1c1917]">
+                    {lender.minRate === lender.maxRate
+                      ? `${lender.minRate}%`
+                      : `${lender.minRate}–${lender.maxRate}%`}
+                  </p>
+                  <p className="text-[10px] text-[#a8a29e]">Rate p.a.</p>
+                </div>
+                <div className="flex flex-col pl-4 py-2.5 gap-0.5">
+                  <p className="text-xs font-semibold text-[#1c1917]">
+                    {lender.minTenure && lender.maxTenure
+                      ? `${lender.minTenure}–${lender.maxTenure}m`
+                      : "—"}
+                  </p>
+                  <p className="text-[10px] text-[#a8a29e]">Tenure</p>
+                </div>
+              </div>
+            </motion.button>
+          ))}
+
+          {/* Excluded lenders — quiet footnote at bottom of list */}
+          {ineligible.length > 0 && (
+            <motion.button
+              variants={listItem}
+              type="button"
+              onClick={() => setExcludedSheetOpen(true)}
+              className="flex items-center justify-center gap-1.5 py-2"
+            >
+              <span className="text-xs text-[#a8a29e]">
+                {ineligible.length} lender{ineligible.length > 1 ? "s" : ""} not eligible
+              </span>
+              <ChevronRight className="h-3 w-3 text-[#a8a29e]" />
+            </motion.button>
+          )}
         </motion.div>
       </div>
 
-      {/* Fixed footer */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] bg-white px-4 py-3 z-10 border-t border-[#e7e5e4] shadow-[0_-1px_3px_rgba(0,0,0,0.06)] space-y-2">
-        <button
-          type="button"
-          onClick={handleGenerateOffer}
-          disabled={localSelected.length === 0}
-          className="w-full h-10 rounded-lg bg-[#003323] text-white text-sm font-semibold disabled:opacity-60"
-        >
-          Generate offer
-        </button>
-        <div className="flex items-center justify-center gap-1.5">
-          <Shield className="h-3.5 w-3.5 text-[#78716c]" strokeWidth={1.5} />
-          <span className="text-xs text-[#78716c]">100% secure as per RBI</span>
-        </div>
-      </div>
-
-      {/* Steps sheet */}
-      <BottomSheet open={stepsOpen} onClose={() => setStepsOpen(false)}>
-        <StepsBottomSheet
-          onCTA={() => {
-            setStepsOpen(false);
-            goTo(SCREENS.BANK_SELECTION);
-          }}
-        />
+      {/* Decision sheet */}
+      <BottomSheet open={decisionSheetOpen} onClose={() => setDecisionSheetOpen(false)}>
+        {pendingLender && (
+          <BankStatementDecisionSheet
+            lender={pendingLender}
+            onShareBankStatement={() => {
+              update({ selectedLenderId: pendingLenderId });
+              setDecisionSheetOpen(false);
+              goTo(SCREENS.BANK_SELECTION);
+            }}
+            onSkip={() => {
+              update({ selectedLenderId: pendingLenderId });
+              setDecisionSheetOpen(false);
+              goTo(SCREENS.AADHAAR_KYC);
+            }}
+          />
+        )}
       </BottomSheet>
 
       {/* Excluded lenders sheet */}
